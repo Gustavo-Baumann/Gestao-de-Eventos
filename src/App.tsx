@@ -6,6 +6,7 @@ import Fallback from './components/Fallback'
 import { useAuth } from './hooks/useAuth'
 import Cadastro from './components/Cadastro'
 import Login from './components/Login'
+import Configuracoes from './components/Configuracoes'
 
 function App() {
 
@@ -22,6 +23,7 @@ function App() {
         <Route path='/' element={ sessao ? <Feed /> : <Navigate to="/login" replace />} />
         <Route path='/cadastro' element={ sessao ? <Navigate to="/" replace /> : <Cadastro />} />
         <Route path='/login' element={ sessao ? <Navigate to="/" replace /> : <Login />} />
+        <Route path='/configuracoes' element={ sessao ? <Configuracoes /> : <Navigate to="/" replace />} />
         <Route path='*' element={<Fallback />} />
       </Routes>
     </Router>

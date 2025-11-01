@@ -1,14 +1,14 @@
-import { supabase } from "../supabase-client"
+import BarraSuperior from "./BarraSuperior"
 
 const Feed = () => {
+
+  function toggleDarkMode(){
+    
+  }
+
   return (
     <div>
-      <h1>Bem-vindo ao Feed!</h1>
-      <p>Você está logado.</p>
-
-      <button onClick={() => supabase.auth.signOut()}>
-        Sair (logout)
-      </button>
+      <BarraSuperior toggleDarkMode = {toggleDarkMode}/>
     </div>
   )
 }
