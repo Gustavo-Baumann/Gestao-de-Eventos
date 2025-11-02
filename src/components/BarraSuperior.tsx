@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MagnifyingGlassIcon,
@@ -11,19 +11,14 @@ import {
   Bars3Icon,
 } from '@heroicons/react/24/outline';
 import { supabase } from '../supabase-client';
+import { useTema } from '../context/TemaContext';
+import { useUsuario } from '../context/UsuarioContext';
 
-interface BarraSuperiorProps {
-  toggleDarkMode: () => void;
-  usuario_id?: string;
-}
-
-const BarraSuperior: React.FC<BarraSuperiorProps> = ({
-  toggleDarkMode,
-  usuario_id,
-}) => {
+const BarraSuperior = () => {
   const navigate = useNavigate();
+  const { toggleDarkMode, tema } = useTema()
+  const  usuario_id  = useUsuario()
 
-  const [darkMode, setDarkMode] = useState<boolean>(false);
   const [queryPesquisa, setQueryPesquisa] = useState<string>('');
   const [tipoFiltro, setTipoFiltro] = useState<'nome' | 'cidade'>('nome');
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
@@ -47,7 +42,6 @@ const BarraSuperior: React.FC<BarraSuperiorProps> = ({
   };
 
   const handleToggleDarkMode = () => {
-    setDarkMode((prev) => !prev);
     toggleDarkMode();
   };
 
@@ -128,9 +122,9 @@ const BarraSuperior: React.FC<BarraSuperiorProps> = ({
             <button
               onClick={handleToggleDarkMode}
               className="p-2 bg-purple-700 hover:bg-purple-800 rounded-lg transition-colors"
-              aria-label={darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              aria-label={tema == 'escuro' ? 'Ativar modo claro' : 'Ativar modo escuro'}
             >
-              {darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+              {tema == 'escuro' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
             </button>
 
             <button
@@ -177,8 +171,8 @@ const BarraSuperior: React.FC<BarraSuperiorProps> = ({
               onClick={() => { handleToggleDarkMode(); setMenuOpen(false); }}
               className="flex items-center gap-2 px-3 py-2 hover:bg-purple-800 rounded-lg text-sm"
             >
-              {typeof darkMode === 'boolean' && darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
-              <span>{darkMode ? 'Modo Claro' : 'Modo Escuro'}</span>
+              {tema == 'escuro' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+              <span>{tema == 'escuro' ? 'Modo Claro' : 'Modo Escuro'}</span>
             </button>
 
             <button
