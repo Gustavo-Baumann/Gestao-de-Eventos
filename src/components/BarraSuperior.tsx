@@ -17,7 +17,7 @@ import { useUsuario } from '../context/UsuarioContext';
 const BarraSuperior = () => {
   const navigate = useNavigate();
   const { toggleDarkMode, tema } = useTema()
-  const  usuario_id  = useUsuario()
+  const { perfil } = useUsuario();
 
   const [queryPesquisa, setQueryPesquisa] = useState<string>('');
   const [tipoFiltro, setTipoFiltro] = useState<'nome' | 'cidade'>('nome');
@@ -33,10 +33,11 @@ const BarraSuperior = () => {
   };
 
   const handlePerfil = () => {
-    if (usuario_id) navigate(`/${usuario_id}`);
+    if (perfil?.nome) navigate(`/perfil/${perfil.nome}`);
   };
 
   const handleLogout = async () => {
+    console.log("foi")
     await supabase.auth.signOut();
     navigate('/login');
   };
@@ -50,7 +51,7 @@ const BarraSuperior = () => {
       className="bg-purple-600 text-white w-full fixed top-0 left-0 z-50 shadow-lg"
       role="banner"
     >
-      <div className="flex h-16 px-2 max-w-screen-xl mx-auto">
+      <div className="flex h-16 px-1 max-w-screen-xl mx-auto">
 
         <div className="flex items-center justify-start gap-2 w-4/5 sm:w-2/3 lg:w-1/2 ">
           <button
@@ -70,7 +71,7 @@ const BarraSuperior = () => {
               onChange={(e) => setQueryPesquisa(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleBusca()}
               placeholder="Buscar..."
-              className="flex-1 h-full px-3 bg-white text-gray-900 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm text-sm min-w-0"
+              className="flex-1 h-full px-3 bg-white text-gray-600 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm text-sm min-w-0"
               aria-label="Campo de busca"
             />
 
@@ -84,7 +85,7 @@ const BarraSuperior = () => {
 
             <div className="h-full px-2 bg-purple-700 text-white flex items-center">
               <FunnelIcon className="w-5 h-5" aria-hidden="true" />
-              <span className="ml-1 hidden sm:inline text-xs font-medium">Filtrar</span>
+              <span className="ml-1 hidden sm:inline text-xs font-medium">Filtrar por</span>
             </div>
 
             <select

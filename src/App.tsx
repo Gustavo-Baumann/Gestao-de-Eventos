@@ -1,14 +1,19 @@
+import React, { Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
-import Feed from './components/Feed'
 import Carregando from './components/Carregando'
-import Fallback from './components/Fallback'
+import ErrorBoundary from './components/ErrorBoundary'
 import { useAuth } from './hooks/useAuth'
-import Cadastro from './components/Cadastro'
-import Login from './components/Login'
-import Configuracoes from './components/Configuracoes'
 import { TemaProvider } from './context/TemaContext'
 import { UsuarioProvider } from './context/UsuarioContext'
+
+const Feed = React.lazy(() => import('./components/Feed'));
+const Cadastro = React.lazy(() => import('./components/Cadastro'));
+const Login = React.lazy(() => import('./components/Login'));
+const Configuracoes = React.lazy(() => import('./components/Configuracoes'));
+const Fallback = React.lazy(() => import('./components/Fallback'));
+const Perfil = React.lazy(() => import('./components/Perfil'));
+const Erro = React.lazy(() => import('./components/Erro'));
 
 function App() {
 
@@ -23,13 +28,19 @@ function App() {
     <TemaProvider>
     <UsuarioProvider>
       <Router>
-       <Routes>
-          <Route path='/' element={ sessao ? <Feed /> : <Navigate to="/login" replace />} />
-          <Route path='/cadastro' element={ sessao ? <Navigate to="/" replace /> : <Cadastro />} />
-          <Route path='/login' element={ sessao ? <Navigate to="/" replace /> : <Login />} />
-          <Route path='/configuracoes' element={ sessao ? <Configuracoes /> : <Navigate to="/login" replace />} />
-          <Route path='*' element={<Fallback />} />
-        </Routes>
+      <ErrorBoundary>
+        <Suspense fallback= {<Carregando />}>
+          <Routes>
+            <Route path='/' element={ sessao ? <Feed /> : <Navigate to="/login" replace />} />
+            <Route path='/cadastro' element={ sessao ? <Navigate to="/" replace /> : <Cadastro />} />
+            <Route path='/login' element={ sessao ? <Navigate to="/" replace /> : <Login />} />
+            <Route path="/perfil/:nome" element={ sessao ? <Perfil /> : <Navigate to="/login" replace />} />
+            <Route path='/configuracoes' element={ sessao ? <Configuracoes /> : <Navigate to="/login" replace />} />
+            <Route path='/erro' element={<Erro />} /> 
+            <Route path='*' element={<Fallback />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
       </Router>
     </UsuarioProvider>
     </TemaProvider>

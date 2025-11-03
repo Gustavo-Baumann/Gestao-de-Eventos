@@ -49,7 +49,6 @@ export function TemaProvider({ children }: { children: ReactNode }) {
       root.classList.add('dark');
     }
     localStorage.setItem('tema', state.Tema);
-    console.log("trocou para" + state.Tema)
   }, [state.Tema]);
 
    useLayoutEffect(() => {
