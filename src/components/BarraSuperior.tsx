@@ -17,7 +17,7 @@ import { useUsuario } from '../context/UsuarioContext';
 const BarraSuperior = () => {
   const navigate = useNavigate();
   const { toggleDarkMode, tema } = useTema()
-  const { perfil } = useUsuario();
+  const { perfil, logout } = useUsuario();
 
   const [queryPesquisa, setQueryPesquisa] = useState<string>('');
   const [tipoFiltro, setTipoFiltro] = useState<'nome' | 'cidade'>('nome');
@@ -37,8 +37,7 @@ const BarraSuperior = () => {
   };
 
   const handleLogout = async () => {
-    console.log("foi")
-    await supabase.auth.signOut();
+    await logout()
     navigate('/login');
   };
 

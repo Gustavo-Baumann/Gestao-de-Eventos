@@ -23,7 +23,6 @@ function App() {
     return <Carregando />
   }
 
-
   return (
     <TemaProvider>
     <UsuarioProvider>
