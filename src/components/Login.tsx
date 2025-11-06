@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabase-client'
+import { getSupabaseClient } from '../supabase-client'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -9,6 +9,7 @@ export default function Login() {
   const [erro, setErro] = useState<string | null>(null)
 
   const navigate = useNavigate()
+  const supabase = getSupabaseClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

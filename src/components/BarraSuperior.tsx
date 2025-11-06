@@ -10,7 +10,6 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
 } from '@heroicons/react/24/outline';
-import { supabase } from '../supabase-client';
 import { useTema } from '../context/TemaContext';
 import { useUsuario } from '../context/UsuarioContext';
 
@@ -33,7 +32,15 @@ const BarraSuperior = () => {
   };
 
   const handlePerfil = () => {
-    if (perfil?.nome) navigate(`/perfil/${perfil.nome}`);
+    if (perfil?.nome) {
+      const slug = perfil.nome
+        .trim()
+        .replace(/\s+/g, '_')       
+        .replace(/[^a-zA-Z0-9_]/g, '')  
+        .replace(/_+/g, '_');           
+
+      navigate(`/perfil/${slug}`);
+    }
   };
 
   const handleLogout = async () => {

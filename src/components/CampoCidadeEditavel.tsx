@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Pencil } from 'lucide-react';
-import { supabase } from '../supabase-client';
+import { useSupabaseClient } from '../supabase-client';
 
 interface Cidade {
   codigo_ibge: number;
@@ -19,6 +19,7 @@ export default function CampoCidadeEditavel({ cidade_id, onSalvar }: CampoCidade
   const [busca, setBusca] = useState('');
   const [cidadeAtual, setCidadeAtual] = useState<Cidade | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const supabase = useSupabaseClient()
 
   useEffect(() => {
     if (!cidade_id) return;

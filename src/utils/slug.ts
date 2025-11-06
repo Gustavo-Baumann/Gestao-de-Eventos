@@ -9,9 +9,7 @@ export const criarSlug = (nome: string): string => {
 };
 
 export const lerSlug = (slug: string): string => {
-  return slug
-    .replace(/-/g, ' ')
+  return decodeURIComponent(slug)
     .replace(/_/g, ' ') 
-    .replace(/\s+/g, ' ')
     .trim();
 };

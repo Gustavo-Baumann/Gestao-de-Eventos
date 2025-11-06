@@ -5,7 +5,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { supabase } from '../supabase-client';
+import { useSupabaseClient } from '../supabase-client';
 
 export interface PerfilUsuario {
   nome: string;
@@ -32,6 +32,7 @@ export function UsuarioProvider({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const supabase = useSupabaseClient()
 
   const buscarPerfilLogado = async () => {
     try {
@@ -66,12 +67,15 @@ export function UsuarioProvider({ children }: { children: ReactNode }) {
 
   const buscarPerfilPorNome = async (nome: string): Promise<PerfilUsuario | null> => {
     try {
+      console.log('[DEBUG] SupabaseClient ID:', supabase)
+      console.log('[DEBUG] Chamando .select() agora...')
       const { data, error } = await supabase
         .from('usuarios')
         .select('nome, numero_celular, tipo_usuario, data_nascimento, cidade_id, imagem_url')
         .eq('nome', nome)
         .eq('deletado', false)
         .single();
+      console.log('[DEBUG] Retorno:', { data, error })
       if (error) return null;
       return data;
     } catch {
@@ -95,7 +99,6 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
 
   const extensao = file.name.split('.').pop()?.toLowerCase();
   const nomeArquivo = `private/${perfil.nome}-${Date.now()}.${extensao}`;
-  console.log("fez a call")
 
   const { data, error } = await supabase.storage
     .from('imagens_perfil')
@@ -103,8 +106,6 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
       cacheControl: '3600',
       upsert: true,
   });
-
-  console.log("terminou a call")
 
   if (error) {
     console.error('Erro no upload:', error);

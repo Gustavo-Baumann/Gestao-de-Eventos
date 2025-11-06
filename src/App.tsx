@@ -14,6 +14,7 @@ const Configuracoes = React.lazy(() => import('./components/Configuracoes'));
 const Fallback = React.lazy(() => import('./components/Fallback'));
 const Perfil = React.lazy(() => import('./components/Perfil'));
 const Erro = React.lazy(() => import('./components/Erro'));
+const CriarEvento = React.lazy(() => import('./components/CriarEvento'))
 
 function App() {
 
@@ -25,9 +26,9 @@ function App() {
 
   return (
     <TemaProvider>
-    <UsuarioProvider>
+      <UsuarioProvider>
       <Router>
-      <ErrorBoundary>
+        <ErrorBoundary>
         <Suspense fallback= {<Carregando />}>
           <Routes>
             <Route path='/' element={ sessao ? <Feed /> : <Navigate to="/login" replace />} />
@@ -35,13 +36,14 @@ function App() {
             <Route path='/login' element={ sessao ? <Navigate to="/" replace /> : <Login />} />
             <Route path="/perfil/:nome" element={ sessao ? <Perfil /> : <Navigate to="/login" replace />} />
             <Route path='/configuracoes' element={ sessao ? <Configuracoes /> : <Navigate to="/login" replace />} />
+            <Route path='/criar' element={ sessao ? <CriarEvento /> : <Navigate to="/login" replace />}/>
             <Route path='/erro' element={<Erro />} /> 
             <Route path='*' element={<Fallback />} />
           </Routes>
         </Suspense>
-      </ErrorBoundary>
+        </ErrorBoundary>
       </Router>
-    </UsuarioProvider>
+      </UsuarioProvider>
     </TemaProvider>
   ) 
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabase-client';
+import { useSupabaseClient } from '../supabase-client';
 
 interface CidadeDisplayProps {
   cidade_id: number | null;
@@ -8,6 +8,7 @@ interface CidadeDisplayProps {
 export default function CidadeDisplay({ cidade_id }: CidadeDisplayProps) {
   const [cidade, setCidade] = useState<{ nome: string; uf: string } | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const supabase = useSupabaseClient()
 
   useEffect(() => {
     if (!cidade_id) {

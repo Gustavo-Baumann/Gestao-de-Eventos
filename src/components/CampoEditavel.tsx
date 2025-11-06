@@ -20,7 +20,7 @@ export default function CampoEditavel({
 }: CampoEditavelProps) {
   const [editando, setEditando] = useState(false);
   const [novoValor, setNovoValor] = useState(valor || '');
-  const [valorOriginal] = useState(valor || ''); // para cancelar
+  const [valorOriginal] = useState(valor || ''); 
   const [salvando, setSalvando] = useState(false);
 
   const handleSalvar = async () => {

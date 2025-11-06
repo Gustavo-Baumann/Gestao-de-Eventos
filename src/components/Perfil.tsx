@@ -8,18 +8,17 @@ import CampoCidadeEditavel from './CampoCidadeEditavel';
 import Carregando from './Carregando';
 import CidadeDisplay from './CidadeDisplay';
 import Fallback from './Fallback';
-import { lerSlug } from '../utils/slug';
 import { Camera } from 'lucide-react';
 import ModalUploadImagem from './modalUploadImagem';
 
 export default function Perfil() {
   const { nome: slug } = useParams<{ nome: string }>();
-  const nomeFromUrl = slug ? lerSlug(slug) : '';
+  const nomeFromUrl = slug ? decodeURIComponent(slug) : '';
   const { 
     perfil: usuarioLogado, 
     buscarPerfilPorNome, 
     atualizarCampo, 
-    uploadImagemPerfil 
+    uploadImagemPerfil, 
   } = useUsuario();
 
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null);

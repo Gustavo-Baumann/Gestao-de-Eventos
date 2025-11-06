@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../supabase-client'
+import { useSupabaseClient } from '../supabase-client'
 
 export function useAuth(){
     const [sessao, setSessao] = useState<any>()
     const [carregando,setCarregando] = useState<boolean>(true)
+    const supabase = useSupabaseClient()
 
     const checarSessao = useCallback(async ()=> {
         try{
@@ -18,13 +19,13 @@ export function useAuth(){
 
     useEffect(()=> {
         checarSessao()
-        const {data: listener} = supabase.auth.onAuthStateChange((_event,session)=> {
+        const {data:{ subscription }} = supabase.auth.onAuthStateChange((_event,session)=> {
             setSessao(session)
             setCarregando(false)
         }
         )
         return ()=> {
-            listener.subscription.unsubscribe()
+            subscription.unsubscribe()
         }
     },[checarSessao])
 
