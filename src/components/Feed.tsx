@@ -50,7 +50,7 @@ const Feed = () => {
             border-r border-gray-200 dark:border-neutral-700
             transition-all duration-300 ease-in-out
             ${sidebarOpen ? 'w-64' : 'w-12 md:w-64'}  
-            overflow-hidden
+            h-screen md:h-auto overflow-hidden
           `}
           role="navigation"
           aria-label="Menu lateral"
@@ -85,7 +85,12 @@ const Feed = () => {
                 <>
                   <button
                     onClick={handleCriarEvento}
-                    className="flex items-center gap-3 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium shadow-sm"
+                    className={`
+                      flex items-center gap-3 px-4 py-3 bg-purple-600 text-white rounded-xl 
+                      hover:bg-purple-700 transition-colors font-medium shadow-sm
+                      md:flex
+                      ${!sidebarOpen ? 'hidden' : ''}
+                    `.trim()}
                     aria-label="Criar novo evento"
                   >
                     <PlusIcon className="w-5 h-5" />
@@ -94,7 +99,10 @@ const Feed = () => {
 
                   <button
                     onClick={handleMeusEventos}
-                    className="flex items-center gap-3 px-4 py-3 bg-purple-100 dark:bg-neutral-700 text-purple-700 dark:text-purple-300 rounded-xl hover:bg-purple-200 dark:hover:bg-neutral-600 transition-colors font-medium"
+                    className={`flex items-center gap-3 px-4 py-3 bg-purple-100 dark:bg-neutral-700 
+                    text-purple-700 dark:text-purple-300 rounded-xl hover:bg-purple-200 
+                    dark:hover:bg-neutral-600 transition-colors font-medium shadow-sm" 
+                    md:flex ${!sidebarOpen ? 'hidden' : ''}`.trim()}
                     aria-label="Ver meus eventos"
                   >
                     <CalendarIcon className="w-5 h-5" />
@@ -107,7 +115,9 @@ const Feed = () => {
                 <>
                   <button
                     onClick={handleMinhasInscricoes}
-                    className="flex items-center gap-3 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium shadow-sm"
+                    className={`flex items-center gap-3 px-4 py-3 bg-purple-600 text-white 
+                    rounded-xl hover:bg-purple-700 transition-colors font-medium shadow-sm 
+                    md:flex ${!sidebarOpen ? 'hidden' : ''}`.trim()}
                     aria-label="Ver minhas inscrições"
                   >
                     <TicketIcon className="w-5 h-5" />
@@ -116,7 +126,9 @@ const Feed = () => {
 
                   <button
                     onClick={handleReviews}
-                    className="flex items-center gap-3 px-4 py-3 bg-purple-100 dark:bg-neutral-700 text-purple-700 dark:text-purple-300 rounded-xl hover:bg-purple-200 dark:hover:bg-neutral-600 transition-colors font-medium"
+                    className={`flex items-center gap-3 px-4 py-3 bg-purple-100 dark:bg-neutral-700 
+                    text-purple-700 dark:text-purple-300 rounded-xl hover:bg-purple-200 
+                    dark:hover:bg-neutral-600 transition-colors font-medium md:flex ${!sidebarOpen ? 'hidden' : ''}`}
                     aria-label="Ver minhas reviews"
                   >
                     <StarIcon className="w-5 h-5" />

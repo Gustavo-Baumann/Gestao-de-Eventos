@@ -23,7 +23,19 @@ interface UsuarioContextType {
   buscarPerfilPorNome: (nome: string) => Promise<PerfilUsuario | null>;
   atualizarCampo: (campo: keyof PerfilUsuario, valor: any) => Promise<void>;
   uploadImagemPerfil: (file: File) => Promise<string | undefined>
+  criarEvento: (dados: CriarEventoData) => Promise<void>;
   logout: () => Promise<void>
+}
+
+interface CriarEventoData {
+  nome: string;
+  data_realizacao: string; 
+  data_encerramento: string;
+  descricao: string | null;
+  numero_vagas: number | null;
+  gratuito: boolean;
+  banner_url?: File | null;
+  imagens_url?: File[] | null;
 }
 
 const UsuarioContext = createContext<UsuarioContextType | undefined>(undefined);
@@ -129,6 +141,99 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
     }
   };
 
+  const uploadBanner = async (file: File, eventoId: number): Promise<string> => {
+    const caminho = `${eventoId}/banner.jpg`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('imagens_banner')
+      .upload(caminho, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from('imagens_banner')
+      .getPublicUrl(caminho);
+      
+    if (!urlData?.publicUrl) {
+      throw new Error('Falha ao gerar URL pública do banner');
+    }
+
+    return urlData.publicUrl;
+  };
+
+  const uploadImagensAdicionais = async (files: File[], eventoId: number): Promise<string[]> => {
+    const urls: string[] = [];
+
+    for (const file of files) {
+      const extensao = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const nomeArquivo = `${eventoId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${extensao}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('imagens_evento')
+        .upload(nomeArquivo, file, { upsert: true });
+
+      if (uploadError) {
+        console.error(`Erro no upload de ${file.name}:`, uploadError);
+        continue; 
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('imagens_evento')
+        .getPublicUrl(nomeArquivo);
+
+      if (urlData?.publicUrl) {
+        urls.push(urlData.publicUrl);
+      }
+    }
+
+    if (urls.length === 0) throw new Error('Nenhuma imagem foi enviada com sucesso');
+
+    return urls;
+  };
+
+  const criarEvento = async (dados: CriarEventoData) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error('Usuário não autenticado');
+
+      const { data: eventoCriado, error: insertError } = await supabase.from('eventos').insert({
+        id_criador: userId, 
+        ...dados,
+      }).select('id').single();
+
+      if (insertError) throw insertError;
+
+      const eventoId = eventoCriado.id;
+      let bannerUrl: string | null = null;
+      let imagensUrls: string[] = [];
+
+      if (dados.banner_url) {
+        bannerUrl = await uploadBanner(dados.banner_url, eventoId);
+      }
+
+      if (dados.imagens_url && dados.imagens_url.length > 0) {
+        imagensUrls = await uploadImagensAdicionais(dados.imagens_url, eventoId);
+      }
+
+      const updateData: any = {};
+      if (bannerUrl) updateData.banner_url = bannerUrl;
+      if (imagensUrls.length > 0) updateData.imagens_url = imagensUrls;
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from('eventos')
+          .update(updateData)
+          .eq('id', eventoId);
+
+        if (updateError) throw updateError;
+      }
+    } catch (err: any) {
+      console.error('Erro ao criar evento:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     buscarPerfilLogado();
 
@@ -156,6 +261,7 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
         atualizarCampo,
         logout,
         uploadImagemPerfil,
+        criarEvento,
       }}
     >
       {children}

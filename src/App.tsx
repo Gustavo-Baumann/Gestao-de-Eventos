@@ -15,6 +15,7 @@ const Fallback = React.lazy(() => import('./components/Fallback'));
 const Perfil = React.lazy(() => import('./components/Perfil'));
 const Erro = React.lazy(() => import('./components/Erro'));
 const CriarEvento = React.lazy(() => import('./components/CriarEvento'))
+const MeusEventos = React.lazy(() => import('./components/MeusEventos'))
 
 function App() {
 
@@ -36,7 +37,8 @@ function App() {
             <Route path='/login' element={ sessao ? <Navigate to="/" replace /> : <Login />} />
             <Route path="/perfil/:nome" element={ sessao ? <Perfil /> : <Navigate to="/login" replace />} />
             <Route path='/configuracoes' element={ sessao ? <Configuracoes /> : <Navigate to="/login" replace />} />
-            <Route path='/criar' element={ sessao ? <CriarEvento /> : <Navigate to="/login" replace />}/>
+            <Route path='/criar-evento' element={ sessao ? <CriarEvento /> : <Navigate to="/login" replace />}/>
+            <Route path='/meus-eventos' element={ sessao ? <MeusEventos /> : <Navigate to="/login" replace />} />
             <Route path='/erro' element={<Erro />} /> 
             <Route path='*' element={<Fallback />} />
           </Routes>
