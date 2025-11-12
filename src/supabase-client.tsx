@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
-import React, { createContext, useContext, useEffect, useState } from "react"
+import React, { createContext, useContext } from "react"
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!
@@ -8,6 +8,7 @@ let _cachedClient: SupabaseClient | null = null
 
 export function getSupabaseClient(): SupabaseClient {
   if (!_cachedClient) {
+    console.log('Criando novo SupabaseClient');
     _cachedClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
@@ -16,14 +17,16 @@ export function getSupabaseClient(): SupabaseClient {
         storage: window.localStorage,
       },
     })
-    _cachedClient.auth.startAutoRefresh()
+    _cachedClient.auth.startAutoRefresh();
+  }else{
+    console.log('Reutilizando SupabaseClient existente');
   }
   return _cachedClient
 }
 
 export function resetAndRecreateClient(): SupabaseClient {
   if (_cachedClient) {
-    _cachedClient.auth.stopAutoRefresh()
+    _cachedClient.auth.stopAutoRefresh();
   }
 
   const keysToRemove = []
@@ -43,7 +46,7 @@ export function resetAndRecreateClient(): SupabaseClient {
       storage: window.localStorage,
     },
   })
-  _cachedClient.auth.startAutoRefresh()
+  _cachedClient.auth.startAutoRefresh();
 
   return _cachedClient
 }
@@ -51,21 +54,9 @@ export function resetAndRecreateClient(): SupabaseClient {
 const SupabaseContext = createContext<SupabaseClient | null>(null)
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
-  const [client,setClient] = useState<SupabaseClient>(getSupabaseClient)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const current = getSupabaseClient()
-      if (current !== client) {
-        setClient(current)
-      }
-    }, 500)
-
-    return () => clearInterval(interval)
-  }, [client])
 
   return (
-    <SupabaseContext.Provider value={client}>
+    <SupabaseContext.Provider value={getSupabaseClient()}>
       {children}
     </SupabaseContext.Provider>
   )

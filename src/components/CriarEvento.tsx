@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import Header from './Header';
 import { useUsuario } from '../context/UsuarioContext';
+import CidadeSelect from './CidadeSelect';
 
 const CriarEvento = () => {
   const { perfil, criarEvento } = useUsuario();
@@ -11,6 +12,7 @@ const CriarEvento = () => {
   const [descricao, setDescricao] = useState('');
   const [numeroVagas, setNumeroVagas] = useState('');
   const [gratuito, setGratuito] = useState('true');
+  const [cidadeId, setCidadeId] = useState<number | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [imagensAdicionais, setImagensAdicionais] = useState<File[]>([]);
   const [horaRealizacao, setHoraRealizacao] = useState('09:00');
@@ -61,6 +63,7 @@ const CriarEvento = () => {
         descricao: descricao || null,
         numero_vagas: numeroVagas ? Number(numeroVagas) : null,
         gratuito: gratuito === 'true',
+        cidade: cidadeId,
         banner_url: bannerFile,
         imagens_url: imagensAdicionais,
       });
@@ -196,6 +199,12 @@ const CriarEvento = () => {
                 {descricao.length}/500
               </p>
             </div>
+
+            <CidadeSelect
+              value={cidadeId}
+              onChange={setCidadeId}
+              required
+            />
 
             <div>
               <label htmlFor="numeroVagas" className="block text-sm font-medium mb-2">

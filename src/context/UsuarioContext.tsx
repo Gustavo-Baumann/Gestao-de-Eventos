@@ -5,7 +5,8 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { useSupabaseClient } from '../supabase-client';
+import { getSupabaseClient } from '../supabase-client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface PerfilUsuario {
   nome: string;
@@ -18,8 +19,10 @@ export interface PerfilUsuario {
 
 interface UsuarioContextType {
   perfil: PerfilUsuario | null;
+  userId: string | null;
   carregando: boolean;
   erro: string | null;
+  supabase: SupabaseClient;
   buscarPerfilPorNome: (nome: string) => Promise<PerfilUsuario | null>;
   atualizarCampo: (campo: keyof PerfilUsuario, valor: any) => Promise<void>;
   uploadImagemPerfil: (file: File) => Promise<string | undefined>
@@ -34,6 +37,7 @@ interface CriarEventoData {
   descricao: string | null;
   numero_vagas: number | null;
   gratuito: boolean;
+  cidade: number | null;
   banner_url?: File | null;
   imagens_url?: File[] | null;
 }
@@ -42,27 +46,32 @@ const UsuarioContext = createContext<UsuarioContextType | undefined>(undefined);
 
 export function UsuarioProvider({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const supabase = useSupabaseClient()
+  const supabase = getSupabaseClient();
 
   const buscarPerfilLogado = async () => {
     try {
       setCarregando(true);
       setErro(null);
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      if (!userId) {
+      if (sessionError || !session?.user) {
         setPerfil(null);
+        setUserId(null);
         setCarregando(false);
         return;
       }
 
+      const uuid = session.user.id;
+      setUserId(uuid);
+
       const { data, error } = await supabase
         .from('usuarios')
         .select('nome, numero_celular, tipo_usuario, data_nascimento, cidade_id, imagem_url')
-        .eq('id', userId)
+        .eq('id', uuid)
         .eq('deletado', false)
         .single();
 
@@ -72,6 +81,7 @@ export function UsuarioProvider({ children }: { children: ReactNode }) {
       console.error('Erro ao buscar perfil logado:', err);
       setErro('Erro ao carregar perfil');
       setPerfil(null);
+      setUserId(null);
     } finally {
       setCarregando(false);
     }
@@ -244,6 +254,7 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
         await buscarPerfilLogado();
       } else if (event === 'SIGNED_OUT') {
         setPerfil(null);
+        setUserId(null);
         setCarregando(false);
       }
     });
@@ -255,8 +266,10 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
     <UsuarioContext.Provider
       value={{
         perfil,
+        userId,
         carregando,
         erro,
+        supabase,
         buscarPerfilPorNome,
         atualizarCampo,
         logout,

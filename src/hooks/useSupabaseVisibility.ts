@@ -14,7 +14,6 @@ export function useSupabaseVisibility() {
       if (wasHidden) {
         resetAndRecreateClient()
 
-
         setTimeout(() => {
           getSupabaseClient().auth.getSession().then(({ data }) => {
           })
