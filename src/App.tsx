@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { useAuth } from './hooks/useAuth'
 import { TemaProvider } from './context/TemaContext'
 import { UsuarioProvider } from './context/UsuarioContext'
+import Evento from './components/Evento'
 
 const Feed = React.lazy(() => import('./components/Feed'));
 const Cadastro = React.lazy(() => import('./components/Cadastro'));
@@ -37,7 +38,8 @@ function App() {
             <Route path='/login' element={ sessao ? <Navigate to="/" replace /> : <Login />} />
             <Route path="/perfil/:nome" element={ sessao ? <Perfil /> : <Navigate to="/login" replace />} />
             <Route path='/configuracoes' element={ sessao ? <Configuracoes /> : <Navigate to="/login" replace />} />
-            <Route path='/criar-evento' element={ sessao ? <CriarEvento /> : <Navigate to="/login" replace />}/>
+            <Route path='/criar-evento' element={ sessao ? <CriarEvento /> : <Navigate to="/login" replace />} />
+            <Route path='/evento/:id' element={ sessao ? <Evento /> : <Navigate to="/login" replace />} />
             <Route path='/meus-eventos' element={ sessao ? <MeusEventos /> : <Navigate to="/login" replace />} />
             <Route path='/erro' element={<Erro />} /> 
             <Route path='*' element={<Fallback />} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   PlusIcon,
@@ -7,14 +7,45 @@ import {
   StarIcon,
   ChevronDoubleRightIcon,
   ChevronDoubleLeftIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import BarraSuperior from './BarraSuperior';
 import { useUsuario } from '../context/UsuarioContext';
+import Paginacao from '../components/Paginacao';
+import Carregando from './Carregando';
+
+interface Evento {
+  id: number;
+  nome: string;
+  data_realizacao: string;
+  banner_url: string | null;
+  realizado: boolean;
+  id_criador: string;
+  criador_nome?: string;
+  criador_imagem_url?: string | null;
+  cidade?: string;
+}
+
+export interface Municipio {
+  id: number;     
+  nome: string;
+  uf: string;
+}
+
+const ITENS_POR_PAGINA = 20;
 
 const Feed = () => {
   const navigate = useNavigate();
-  const { perfil } = useUsuario();
+  const { perfil, supabase } = useUsuario();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [mostrarPassados, setMostrarPassados] = useState(false);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [cidadeAlvo, setCidadeAlvo] = useState<number | null>(perfil?.cidade_id ?? null);
+  const [queryPesquisa, setQueryPesquisa] = useState('');
+  const [tipoFiltro, setTipoFiltro] = useState<'nome' | 'cidade'>('nome');
 
   const isCliente = perfil?.tipo_usuario === 'cliente';
   const isOrganizador = perfil?.tipo_usuario === 'organizador';
@@ -39,9 +70,97 @@ const Feed = () => {
     setSidebarOpen(false);
   };
 
+  const buscarEventos = useCallback(async (query: string, tipo: 'nome' | 'cidade', cidadeId?: number | null) => {
+    if (!perfil || !supabase) return;
+
+    setCarregando(true);
+    setQueryPesquisa(query);
+
+    let queryBuilder = supabase
+      .from('eventos')
+      .select(`
+        id,
+        nome,
+        data_realizacao,
+        banner_url,
+        realizado,
+        id_criador,
+        cidade,
+        usuarios!id_criador (
+          nome,
+          imagem_url
+        )
+      `)
+      .eq('deletado', false)
+      .eq('realizado', mostrarPassados)
+      .order('data_realizacao', { ascending: true });
+
+    // Filtro padrão: cidade do usuário
+    if (tipo === 'cidade' && cidadeAlvo !== null && typeof cidadeAlvo === 'number' && !isNaN(cidadeAlvo)) {
+      queryBuilder = queryBuilder.eq('cidade', cidadeAlvo);
+    }
+
+    // Filtros específicos
+    if (tipo === 'nome' && query.trim()) {
+      queryBuilder = queryBuilder.ilike('nome', `%${query.trim()}%`);
+    }
+
+    const { data, error } = await queryBuilder;
+
+    if (error) {
+      console.error('Erro ao buscar eventos:', error);
+      setEventos([]);
+    } else {
+      const formatados = (data || []).map((e: any) => ({
+        id: e.id,
+        nome: e.nome,
+        data_realizacao: e.data_realizacao,
+        banner_url: e.banner_url,
+        realizado: e.realizado,
+        id_criador: e.id_criador,
+        criador_nome: e.usuarios?.nome,
+        criador_imagem_url: e.usuarios?.imagem_url,
+        cidade: e.cidade,
+      }));
+      setEventos(formatados);
+    }
+    setCarregando(false);
+    setPaginaAtual(1);
+  }, [perfil, supabase, mostrarPassados, cidadeAlvo]);
+
+  useEffect(() => {
+    if (tipoFiltro === 'cidade') {
+      buscarEventos('', 'cidade');
+    } else {
+      buscarEventos(queryPesquisa, 'nome');
+    }
+  }, [cidadeAlvo, mostrarPassados, tipoFiltro, queryPesquisa, buscarEventos]);
+
+  useEffect(() => {
+    if (perfil?.cidade_id) {
+      buscarEventos('', 'nome');
+    }
+  }, [perfil?.cidade_id]);
+
+  const totalPaginas = Math.ceil(eventos.length / ITENS_POR_PAGINA);
+  const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+  const fim = inicio + ITENS_POR_PAGINA;
+  const eventosPaginados = eventos.slice(inicio, fim);
+
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white">
-      <BarraSuperior />
+      <BarraSuperior
+        onBuscar={(query, tipo) => {
+          if (tipo === 'nome') {
+            buscarEventos(query, 'nome');
+          }
+        }}
+        tipoFiltro={tipoFiltro}
+        setTipoFiltro={setTipoFiltro}
+        cidadeAlvo={cidadeAlvo}
+        setCidadeAlvo={setCidadeAlvo}
+        perfilCidadeId={perfil?.cidade_id ?? null}
+      />
 
       <div className="flex h-screen pt-16 md:pt-20">
         <aside
@@ -146,26 +265,140 @@ const Feed = () => {
             transition-all duration-300
             ${sidebarOpen ? 'ml-64' : 'ml-12 md:ml-0'}
           `}
+          role="main"
+          aria-live="polite"
         >
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-6">Feed</h1>
-            <div className="bg-gray-100 dark:bg-neutral-700 border-2 border-dashed border-gray-300 dark:border-neutral-600 rounded-xl p-12 text-center text-gray-500 dark:text-neutral-400">
-              <p className="text-lg">Área de conteúdo principal</p>
-              <p className="text-sm mt-2">Eventos, feed, cards, etc. serão exibidos aqui</p>
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-3xl font-bold" id="titulo-pagina">
+                {mostrarPassados ? 'Histórico de Eventos' : 'Lista de Eventos'}
+              </h1>
+              <button
+                onClick={() => setMostrarPassados(prev => !prev)}
+                className="p-2 rounded-lg hover:bg-purple-100 dark:hover:bg-neutral-700 transition-colors group"
+                aria-label={mostrarPassados ? "Ver eventos futuros" : "Ver histórico de eventos"}
+                aria-pressed={mostrarPassados}
+              >
+                <ClockIcon
+                  className="w-6 h-6 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform"
+                  aria-hidden="true"
+                />
+              </button>
             </div>
 
-            <div className="mt-8 space-y-6">
-              {[...Array(15)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-32 bg-gray-50 dark:bg-neutral-700 rounded-lg p-4 border border-gray-200 dark:border-neutral-600"
-                >
-                  <p className="text-sm text-gray-600 dark:text-neutral-300">
-                    Item de feed #{i + 1}
-                  </p>
+            {carregando ? (
+              <div role="status" aria-live="polite" className="text-center py-10">
+                <Carregando />
+              </div>
+            ) : eventosPaginados.length === 0 ? (
+              <p
+                className="text-center text-gray-600 dark:text-gray-400 py-10"
+                role="status"
+                aria-live="polite"
+              >
+                {tipoFiltro === 'nome' && queryPesquisa
+                  ? `Nenhum evento encontrado com o nome "${queryPesquisa}".`
+                  : mostrarPassados
+                  ? 'Nenhum evento passado encontrado.'
+                  : 'Nenhum evento futuro encontrado na sua cidade.'}
+              </p>
+            ) : (
+              <section aria-labelledby="titulo-pagina">
+                <div className="space-y-6">
+                  {eventosPaginados.map((evento) => (
+                    <article
+                      key={evento.id}
+                      className="bg-white dark:bg-neutral-700 rounded-2xl shadow-lg overflow-hidden border border-gray-300 dark:border-neutral-600"
+                      aria-labelledby={`evento-titulo-${evento.id}`}
+                    >
+                      <div className="h-48 bg-gray-200 dark:bg-neutral-600 relative">
+                        {evento.banner_url ? (
+                          <img
+                            src={evento.banner_url}
+                            alt={`Banner do evento ${evento.nome}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.currentTarget.src = '';
+                              e.currentTarget.className = 'hidden';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className={`absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500 ${
+                            evento.banner_url ? 'hidden' : ''
+                          }`}
+                          aria-hidden="true"
+                        >
+                          Sem banner
+                        </div>
+                      </div>
+
+                      <div className="flex">
+                        <div className="w-32 h-32 -mt-16 ml-6 flex-shrink-0 relative">
+                          <div className="w-full h-full rounded-full overflow-hidden border-4 border-white dark:border-neutral-800 shadow-lg bg-gray-200 dark:bg-neutral-600">
+                            {evento.criador_imagem_url ? (
+                              <img
+                                src={evento.criador_imagem_url}
+                                alt={`Foto de perfil de ${evento.criador_nome}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = '';
+                                  e.currentTarget.className = 'hidden';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null}
+                            <div
+                              className={`absolute inset-0 flex items-center justify-center text-5xl font-bold text-gray-400 dark:text-gray-500 ${
+                                evento.criador_imagem_url ? 'hidden' : ''
+                              }`}
+                              aria-hidden="true"
+                            >
+                              {evento.criador_nome?.[0]?.toUpperCase() || '?'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex-1 p-6 pt-4">
+                          <p className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                            {evento.criador_nome}
+                          </p>
+                          <h3
+                            id={`evento-titulo-${evento.id}`}
+                            className="text-xl font-bold text-black dark:text-white mb-4"
+                          >
+                            {evento.nome}
+                          </h3>
+                          <a
+                            href={`/evento/${evento.id}`}
+                            className="inline-block px-5 py-3 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-base font-medium border border-purple-300 dark:border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigate(`/evento/${evento.id}`);
+                            }}
+                            aria-label={`Ver detalhes do evento ${evento.nome}`}
+                          >
+                            Ver detalhes do evento
+                          </a>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </section>
+            )}
+
+            {totalPaginas > 1 && (
+              <nav className="mt-10" aria-label="Paginação">
+                <Paginacao
+                  paginaAtual={paginaAtual}
+                  totalPaginas={totalPaginas}
+                  onPaginaChange={setPaginaAtual}
+                />
+              </nav>
+            )}
           </div>
         </main>
       </div>

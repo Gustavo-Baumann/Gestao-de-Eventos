@@ -1,15 +1,15 @@
 const Carregando = () => {
   return (
-    <div className="min-h-screen bg-neutral-200 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-neutral-200 dark:bg-neutral-900 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
-        <div className="bg-white border border-blue-200 rounded-xl p-8 shadow-sm">
+        <div className="bg-white dark:bg-neutral-800 border border-blue-200 dark:border-blue-700 rounded-xl p-8 shadow-sm">
           <div className="flex justify-center mb-6">
             <div
-              className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center animate-pulse"
+              className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center animate-pulse"
               aria-hidden="true"
             >
               <svg
-                className="w-10 h-10 text-blue-600 animate-spin"
+                className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -25,14 +25,14 @@ const Carregando = () => {
             </div>
           </div>
 
-          <h1 className="text-2xl font-semibold text-gray-800 text-center mb-3">
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 text-center mb-3">
             Carregando
           </h1>
 
           <div
             role="status"
             aria-live="polite"
-            className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center"
+            className="text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-center"
           >
             Por favor, aguarde enquanto carregamos os dados...
           </div>
