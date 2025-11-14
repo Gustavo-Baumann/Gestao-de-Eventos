@@ -81,7 +81,6 @@ const BarraSuperior = ({
     }
   };
 
-  // Busca de cidades com debounce
   useEffect(() => {
     if (tipoFiltro !== 'cidade' || !inputValue.trim()) {
       setSugestoes([]);
@@ -112,7 +111,6 @@ const BarraSuperior = ({
     return () => clearTimeout(delay);
   }, [inputValue, tipoFiltro, supabase]);
 
-  // Limpar ao trocar filtro
   useEffect(() => {
     if (tipoFiltro === 'nome') {
       setInputValue('');
@@ -127,7 +125,6 @@ const BarraSuperior = ({
     >
       <div className="flex h-16 px-1 max-w-7xl mx-auto items-center">
 
-        {/* Botão Feed + Barra de Busca */}
         <div className="flex items-center justify-start gap-2 w-4/5 sm:w-2/3 lg:w-1/2 relative">
           <button
             onClick={handleHome}
@@ -182,7 +179,6 @@ const BarraSuperior = ({
               <option value="cidade">Cidade</option>
             </select>
 
-            {/* Autocomplete de cidades */}
             {tipoFiltro === 'cidade' && inputValue && sugestoes.length > 0 && (
               <ul
                 id="lista-sugestoes-cidades"
@@ -211,7 +207,6 @@ const BarraSuperior = ({
               </ul>
             )}
 
-            {/* Indicador de cidade selecionada */}
             {tipoFiltro === 'cidade' && cidadeAlvo !== perfilCidadeId && (
               <div
                 className="absolute -bottom-8 left-0 right-0 flex items-center justify-between px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-lg"
@@ -235,7 +230,6 @@ const BarraSuperior = ({
           </div>
         </div>
 
-        {/* Menu de usuário */}
         <div className="flex items-center justify-end gap-2 pr-2 w-1/5 sm:w-1/3 lg:w-1/2">
           <div className="hidden md:flex items-center gap-2">
             <button

@@ -7,16 +7,16 @@ const CriarEvento = () => {
   const { perfil, criarEvento } = useUsuario();
 
   const [nome, setNome] = useState('');
-  const [dataRealizacao, setDataRealizacao] = useState('');
-  const [dataEncerramento, setDataEncerramento] = useState('');
+  const [dataRealizacao, setDataRealizacao] = useState(''); 
+  const [dataEncerramento, setDataEncerramento] = useState(''); 
   const [descricao, setDescricao] = useState('');
   const [numeroVagas, setNumeroVagas] = useState('');
   const [gratuito, setGratuito] = useState('true');
   const [cidadeId, setCidadeId] = useState<number | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [imagensAdicionais, setImagensAdicionais] = useState<File[]>([]);
-  const [horaRealizacao, setHoraRealizacao] = useState('09:00');
-  const [horaEncerramento, setHoraEncerramento] = useState('17:00');
+  const [horaRealizacao, setHoraRealizacao] = useState('09:00'); // apenas HH:mm
+  const [horaEncerramento, setHoraEncerramento] = useState('17:00'); // apenas HH:mm
 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -24,11 +24,9 @@ const CriarEvento = () => {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const imagensInputRef = useRef<HTMLInputElement>(null);
 
-  const combinarDataHora = (data: string, hora: string) => `${data}T${hora}`;
   const isDataFutura = (dataISO: string) => {
     const agora = new Date();
     const evento = new Date(dataISO);
-
     return evento.getTime() >= agora.getTime();
   };
 
@@ -41,13 +39,15 @@ const CriarEvento = () => {
       return;
     }
 
-    const dataRealizacaoISO = combinarDataHora(dataRealizacao, horaRealizacao);
-    const dataEncerramentoISO = combinarDataHora(dataEncerramento, horaEncerramento);
+    const dataRealizacaoISO = `${dataRealizacao}T${horaRealizacao}:00`;
+    const dataEncerramentoISO = `${dataEncerramento}T${horaEncerramento}:00`;
 
     if (!nome.trim()) return setErro('Nome é obrigatório.');
+    if (!dataRealizacao || !horaRealizacao) return setErro('Data e hora de realização são obrigatórias.');
+    if (!dataEncerramento || !horaEncerramento) return setErro('Data e hora de encerramento são obrigatórias.');
     if (!isDataFutura(dataRealizacaoISO)) return setErro('Data de realização deve ser no futuro.');
     if (!isDataFutura(dataEncerramentoISO)) return setErro('Data de encerramento deve ser no futuro.');
-    if (new Date(dataEncerramentoISO) < new Date(dataRealizacaoISO))
+    if (new Date(dataEncerramentoISO) <= new Date(dataRealizacaoISO))
       return setErro('Encerramento deve ser após realização.');
     if (descricao.length > 500) return setErro('Descrição: máx. 500 caracteres.');
     if (numeroVagas && (isNaN(Number(numeroVagas)) || Number(numeroVagas) <= 0))
@@ -57,7 +57,7 @@ const CriarEvento = () => {
 
     try {
       await criarEvento({
-        nome: nome,
+        nome,
         data_realizacao: dataRealizacaoISO,
         data_encerramento: dataEncerramentoISO,
         descricao: descricao || null,
@@ -69,10 +69,17 @@ const CriarEvento = () => {
       });
 
       alert('Evento criado com sucesso!');
-      setNome(''); setDataRealizacao(''); setHoraRealizacao('09:00');
-      setDataEncerramento(''); setHoraEncerramento('17:00');
-      setDescricao(''); setNumeroVagas(''); setGratuito('true');
-      setBannerFile(null); setImagensAdicionais([]);
+      setNome('');
+      setDataRealizacao('');
+      setDataEncerramento('');
+      setHoraRealizacao('09:00');
+      setHoraEncerramento('17:00');
+      setDescricao('');
+      setNumeroVagas('');
+      setGratuito('true');
+      setCidadeId(null);
+      setBannerFile(null);
+      setImagensAdicionais([]);
       if (bannerInputRef.current) bannerInputRef.current.value = '';
       if (imagensInputRef.current) imagensInputRef.current.value = '';
     } catch (err: any) {
@@ -119,12 +126,11 @@ const CriarEvento = () => {
             </div>
 
             <div>
-              <label htmlFor="dataRealizacao" className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Data e hora de realização <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <input
-                  id="dataRealizacao"
                   type="date"
                   value={dataRealizacao}
                   onChange={(e) => setDataRealizacao(e.target.value)}
@@ -134,15 +140,9 @@ const CriarEvento = () => {
                   aria-required="true"
                 />
                 <input
-                  id="horaRealizacao"
                   type="time"
                   value={horaRealizacao}
-                  onChange={(e) => {
-                    const time = e.target.value;
-                    const date = dataRealizacao.split('T')[0] || new Date().toISOString().split('T')[0];
-                    setHoraRealizacao(time);
-                    setDataRealizacao(`${date}T${time}`);
-                  }}
+                  onChange={(e) => setHoraRealizacao(e.target.value)} // SÓ HORA
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-black dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                   aria-required="true"
@@ -151,30 +151,23 @@ const CriarEvento = () => {
             </div>
 
             <div>
-              <label htmlFor="dataEncerramento" className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Data e hora de encerramento <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <input
-                  id="dataEncerramento"
                   type="date"
                   value={dataEncerramento}
                   onChange={(e) => setDataEncerramento(e.target.value)}
                   required
-                  min={dataRealizacao.split('T')[0] || new Date().toISOString().split('T')[0]}
+                  min={dataRealizacao || new Date().toISOString().split('T')[0]}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-black dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                   aria-required="true"
                 />
                 <input
-                  id="horaEncerramento"
                   type="time"
                   value={horaEncerramento}
-                  onChange={(e) => {
-                    const time = e.target.value;
-                    const date = dataEncerramento.split('T')[0] || dataRealizacao.split('T')[0] || new Date().toISOString().split('T')[0];
-                    setHoraEncerramento(time);
-                    setDataEncerramento(`${date}T${time}`);
-                  }}
+                  onChange={(e) => setHoraEncerramento(e.target.value)} // SÓ HORA
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-black dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                   aria-required="true"
@@ -193,9 +186,8 @@ const CriarEvento = () => {
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-black dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition resize-none"
                 placeholder="Informe a descrição do evento"
-                aria-describedby="descricao-help"
               />
-              <p id="descricao-help" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {descricao.length}/500
               </p>
             </div>
@@ -221,9 +213,8 @@ const CriarEvento = () => {
                 onChange={(e) => setNumeroVagas(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-black dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="Deixe vazio para vagas ilimitadas"
-                aria-describedby="vagas-help"
               />
-              <p id="vagas-help" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Opcional – deixe vazio para vagas ilimitadas
               </p>
             </div>
@@ -252,14 +243,10 @@ const CriarEvento = () => {
                 id="banner"
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  setBannerFile(file);
-                }}
+                onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
                 className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 dark:file:bg-purple-900 file:text-purple-700 dark:file:text-purple-300 hover:file:bg-purple-100 dark:hover:file:bg-purple-800 cursor-pointer"
-                aria-describedby="banner-help"
               />
-              <p id="banner-help" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {bannerFile ? `Selecionado: ${bannerFile.name}` : 'Nenhum arquivo selecionado'}
               </p>
             </div>
@@ -275,24 +262,20 @@ const CriarEvento = () => {
                 accept="image/*"
                 multiple
                 onChange={(e) => {
-                  const novosArquivos = Array.from(e.target.files || []);
-                  
+                  const novos = Array.from(e.target.files || []);
                   setImagensAdicionais((prev) => {
-                    const todos = [...prev, ...novosArquivos];
-                    const unicos = todos.filter((file, index, self) =>
-                      index === self.findIndex((f) => f.name === file.name && f.size === file.size)
+                    const todos = [...prev, ...novos];
+                    const unicos = todos.filter(
+                      (file, i, self) =>
+                        i === self.findIndex((f) => f.name === file.name && f.size === file.size)
                     );
-                    return unicos.slice(0, 10); 
+                    return unicos.slice(0, 10);
                   });
-
-                  if (imagensInputRef.current) {
-                    imagensInputRef.current.value = '';
-                  }
+                  if (imagensInputRef.current) imagensInputRef.current.value = '';
                 }}
                 className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 dark:file:bg-purple-900 file:text-purple-700 dark:file:text-purple-300 hover:file:bg-purple-100 dark:hover:file:bg-purple-800 cursor-pointer"
-                aria-describedby="imagens-help"
               />
-              <p id="imagens-help" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {imagensAdicionais.length > 0
                   ? `${imagensAdicionais.length} imagem(ns) selecionada(s)`
                   : 'Nenhuma imagem selecionada'}
@@ -304,7 +287,6 @@ const CriarEvento = () => {
                 type="submit"
                 disabled={enviando || !perfil}
                 className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-md transition-colors duration-200 flex items-center justify-center gap-2"
-                aria-label={enviando ? 'Enviando...' : 'Criar evento'}
               >
                 {enviando ? (
                   <>

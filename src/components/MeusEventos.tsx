@@ -235,20 +235,9 @@ return (
                   to={`/evento/${evento.id}`}
                   className="inline-block px-5 py-3 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-base font-medium border border-purple-300 dark:border-purple-700"
                 >
-                  Clique para ver informações
+                  Ver detalhes do evento
                 </Link>
               </div>
-            </div>
-
-            <div className="px-6 pb-6 flex justify-start">
-              {!evento.realizado && (
-                <Link
-                  to={`/editar-evento/${evento.id}`}
-                  className="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-base font-medium"
-                >
-                  Editar Evento
-                </Link>
-              )}
             </div>
           </article>
         ))

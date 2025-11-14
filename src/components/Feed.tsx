@@ -95,12 +95,10 @@ const Feed = () => {
       .eq('realizado', mostrarPassados)
       .order('data_realizacao', { ascending: true });
 
-    // Filtro padrão: cidade do usuário
     if (tipo === 'cidade' && cidadeAlvo !== null && typeof cidadeAlvo === 'number' && !isNaN(cidadeAlvo)) {
       queryBuilder = queryBuilder.eq('cidade', cidadeAlvo);
     }
 
-    // Filtros específicos
     if (tipo === 'nome' && query.trim()) {
       queryBuilder = queryBuilder.ilike('nome', `%${query.trim()}%`);
     }
