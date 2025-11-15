@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Pencil, X, Trash2, Upload, Loader2, Search } from "lucide-react";
+import { Pencil, X, Trash2, Upload, Loader2, Search, XCircle, CheckCircle } from "lucide-react";
 import { useUsuario } from "../context/UsuarioContext";
 import Header from "./Header";
 import CampoEditavel from "./CampoEditavel";
@@ -43,18 +43,55 @@ const Evento = () => {
   const [buscaCidade, setBuscaCidade] = useState("");
   const [editandoCidade, setEditandoCidade] = useState(false);
   const [mostrarSugestoes, setShowSugestoes] = useState(false);
+  const [editandoTipo, setEditandoTipo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [inscricaoId, setInscricaoId] = useState<number | null>(null);
+  const [carregandoInscricao, setCarregandoInscricao] = useState(true);
+  const [processandoInscricao, setProcessandoInscricao] = useState(false);
+  const [inscritosCount, setInscritosCount] = useState<number>(0);
 
   const isDono = userId === evento?.id_criador;
-  const podeSeInscrever =
-    perfil?.tipo_usuario === "cliente" && evento && !evento.realizado;
+  const eventoIdNum = Number(id);
+
+  const verificarInscricao = async () => {
+    if (!supabase || !userId || !id) return;
+
+    setCarregandoInscricao(true);
+    const { data, error } = await supabase
+      .from("inscricoes")
+      .select("id")
+      .eq("evento_id", eventoIdNum)
+      .eq("usuario_id", userId) 
+      .maybeSingle();
+
+    if (!error && data) {
+      setInscricaoId(data.id);
+    } else {
+      setInscricaoId(null);
+    }
+    setCarregandoInscricao(false);
+  };
+
+  const buscarInscritosCount = async () => {
+    if (!supabase || !evento?.id) return;
+
+    const { count, error } = await supabase
+      .from("inscricoes")
+      .select("*", { count: "exact", head: true })
+      .eq("evento_id", evento.id)
+      .in("status", ["confirmada"]); 
+
+    if (!error && count !== null) {
+      setInscritosCount(count);
+    }
+  };
 
   useEffect(() => {
-    const fetchEvento = async () => {
+    const fetchTudo = async () => {
       if (!supabase || !id) return;
 
       try {
@@ -62,12 +99,10 @@ const Evento = () => {
 
         const { data: eventoData, error: eventoError } = await supabase
           .from("eventos")
-          .select(
-            `
+          .select(`
             id, nome, descricao, cidade, numero_vagas, gratuito, realizado,
             data_realizacao, data_encerramento, banner_url, imagens_url, id_criador
-            `
-          )
+          `)
           .eq("id", id)
           .single();
 
@@ -99,14 +134,16 @@ const Evento = () => {
               .eq("codigo_uf", cidadeData.codigo_uf)
               .single();
 
-            const municipio: Municipio = {
+            setCidadeAtual({
               codigo_ibge: cidadeData.codigo_ibge,
               nome: cidadeData.nome,
               uf: ufData?.uf || "",
-            };
-            setCidadeAtual(municipio);
+            });
           }
         }
+
+        await verificarInscricao();
+        await buscarInscritosCount();
       } catch (err: any) {
         setError(err.message || "Erro ao carregar evento");
       } finally {
@@ -114,8 +151,8 @@ const Evento = () => {
       }
     };
 
-    fetchEvento();
-  }, [id, supabase]);
+    fetchTudo();
+  }, [id, supabase, userId]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -150,8 +187,55 @@ const Evento = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [buscaCidade, supabase]);
 
-  const handleInscricao = async () => {
-    console.log("Inscrição solicitada");
+  const handleInscrever = async () => {
+    if (!supabase || !userId || !evento) return;
+
+    setProcessandoInscricao(true);
+    try {
+      const status = evento.gratuito ? "confirmada" : "pendente";
+
+      const { data, error } = await supabase
+        .from("inscricoes")
+        .insert({
+          evento_id: evento.id,
+          usuario_id: userId,
+          status,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setInscricaoId(data.id);
+      await buscarInscritosCount();
+      alert(evento.gratuito ? "Inscrição confirmada!" : "Inscrição realizada! Aguarde confirmação.");
+    } catch (err: any) {
+      alert("Erro ao se inscrever: " + err.message);
+    } finally {
+      setProcessandoInscricao(false);
+    }
+  };
+
+  const handleCancelarInscricao = async () => {
+    if (!supabase || !inscricaoId) return;
+
+    setProcessandoInscricao(true);
+    try {
+      const { error } = await supabase
+        .from("inscricoes")
+        .delete()
+        .eq("id", inscricaoId);
+
+      if (error) throw error;
+
+      setInscricaoId(null);
+      await buscarInscritosCount();
+      alert("Inscrição cancelada com sucesso.");
+    } catch (err: any) {
+      alert("Erro ao cancelar inscrição: " + err.message);
+    } finally {
+      setProcessandoInscricao(false);
+    }
   };
 
   const handleSalvarCampo = async (campo: keyof EventoData, novoValor: string) => {
@@ -162,6 +246,51 @@ const Evento = () => {
       .eq("id", evento.id);
     if (error) throw error;
     setEvento((prev) => prev ? { ...prev, [campo]: novoValor } : null);
+  };
+
+  const renderBotaoInscricao = () => {
+    if (!perfil || perfil.tipo_usuario !== "cliente" || evento?.realizado) {
+      return null;
+    }
+
+    if (carregandoInscricao || processandoInscricao) {
+      return (
+        <button disabled className="w-full py-3 bg-gray-400 text-white rounded-lg flex items-center justify-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Carregando...
+        </button>
+      );
+    }
+
+     if (estaLotado) {
+      return (
+        <div className="w-full py-3 bg-red-600 text-white rounded-lg text-center font-medium opacity-90">
+          Evento lotado
+        </div>
+      );
+    }
+
+    if (inscricaoId) {
+      return (
+        <button
+          onClick={handleCancelarInscricao}
+          className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium flex items-center justify-center gap-2"
+        >
+          <XCircle className="w-5 h-5" />
+          Cancelar Inscrição
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={handleInscrever}
+        className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium flex items-center justify-center gap-2"
+      >
+        <CheckCircle className="w-5 h-5" />
+        Inscrever-se
+      </button>
+    );
   };
 
   const handleIniciarEdicaoCidade = () => {
@@ -305,6 +434,28 @@ const Evento = () => {
     }
   };
 
+  const validarDatas = (novaRealizacao?: string, novaEncerramento?: string) => {
+    const realizacao = novaRealizacao || evento?.data_realizacao;
+    const encerramento = novaEncerramento || evento?.data_encerramento;
+    const agora = new Date();
+    agora.setSeconds(0, 0);
+
+    if (!realizacao || !encerramento) return false;
+
+    const dtRealizacao = new Date(realizacao);
+    const dtEncerramento = new Date(encerramento);
+
+    if (dtRealizacao < agora) {
+      alert("A data de realização não pode ser no passado.");
+      return false;
+    }
+    if (dtEncerramento < dtRealizacao) {
+      alert("A data de encerramento não pode ser antes da realização.");
+      return false;
+    }
+    return true;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4 flex items-center justify-center">
@@ -322,19 +473,32 @@ const Evento = () => {
     );
   }
 
-  const formatarData = (data: string) =>
-    new Date(data).toLocaleString("pt-BR", {
-      timeZone: "UTC",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatarDataHora = (isoString: string | null | undefined): string => {
+  if (!isoString) return "Não informada";
+
+  const date = new Date(isoString);
+
+  return date.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
+  const vagasTotais = evento?.numero_vagas || 0;
+  const estaLotado = vagasTotais > 0 && inscritosCount >= vagasTotais;
 
   const vagasTexto = evento.numero_vagas
-    ? `0/${evento.numero_vagas}`
+    ? `${inscritosCount}/${evento.numero_vagas}`
     : "Sem limite de vagas";
+
+  const porcentagemPreenchida = vagasTotais > 0
+    ? Math.min(100, (inscritosCount / vagasTotais) * 100)
+    : 0;
 
   return (
   <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4">
@@ -412,20 +576,69 @@ const Evento = () => {
 
           <CampoEditavel
             label="Data de realização"
-            valor={formatarData(evento.data_realizacao)}
+            valor={evento?.data_realizacao ? formatarDataHora(evento.data_realizacao) : null}
             campo="data_realizacao"
             tipo="datetime-local"
-            onSalvar={(v) => handleSalvarCampo("data_realizacao", v)}
-            disabled={!isDono || evento.realizado}
+            disabled={!isDono || evento?.realizado}
+            onSalvar={async (novoValor) => {
+              if (!evento || !supabase) return;
+
+              const novaData = novoValor + ":00"; 
+              const dataRealizacao = new Date(novaData);
+              const agora = new Date();
+              agora.setSeconds(0, 0);
+
+              if (dataRealizacao < agora) {
+                alert("A data de realização não pode ser no passado.");
+                return;
+              }
+
+              if (evento.data_encerramento) {
+                const dataEncerramento = new Date(evento.data_encerramento);
+                if (dataRealizacao > dataEncerramento) {
+                  alert("A data de realização não pode ser depois da data de encerramento.");
+                  return;
+                }
+              }
+
+              const { error } = await supabase
+                .from("eventos")
+                .update({ data_realizacao: novaData })
+                .eq("id", evento.id);
+
+              if (error) throw error;
+
+              setEvento(prev => prev ? { ...prev, data_realizacao: novaData } : null);
+            }}
           />
 
           <CampoEditavel
             label="Data de encerramento"
-            valor={formatarData(evento.data_encerramento)}
+            valor={evento?.data_encerramento ? formatarDataHora(evento.data_encerramento) : null}
             campo="data_encerramento"
             tipo="datetime-local"
-            onSalvar={(v) => handleSalvarCampo("data_encerramento", v)}
-            disabled={!isDono || evento.realizado}
+            disabled={!isDono || evento?.realizado}
+            onSalvar={async (novoValor) => {
+              if (!evento || !supabase) return;
+
+              const novaData = novoValor + ":00";
+              const dataEncerramento = new Date(novaData);
+              const dataRealizacao = new Date(evento.data_realizacao);
+
+              if (dataEncerramento < dataRealizacao) {
+                alert("A data de encerramento não pode ser antes da data de realização.");
+                return;
+              }
+
+              const { error } = await supabase
+                .from("eventos")
+                .update({ data_encerramento: novaData })
+                .eq("id", evento.id);
+
+              if (error) throw error;
+
+              setEvento(prev => prev ? { ...prev, data_encerramento: novaData } : null);
+            }}
           />
 
           <CampoEditavel
@@ -502,44 +715,97 @@ const Evento = () => {
             </div>
           )}
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Vagas</p>
-            <p className="text-sm">{vagasTexto}</p>
-            {evento.numero_vagas && (
-              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 overflow-hidden">
+          <div className="space-y-3">
+            <div className="flex flex-col">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Vagas</p>
+              <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mt-1">
+                {vagasTexto}
+              </p>
+            </div>
+
+            {vagasTotais > 0 && (
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden relative">
                 <div
-                  className="bg-purple-600 h-full transition-all duration-300"
-                  style={{ width: "0%" }}
-                  aria-label="0 vagas ocupadas"
+                  className={`h-full transition-all duration-500 ease-out ${
+                    estaLotado ? "bg-red-500" : "bg-purple-600"
+                  }`}
+                  style={{ width: `${porcentagemPreenchida}%` }}
                 />
+                {estaLotado && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs font-bold text-white drop-shadow">LOTADO</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between py-2">
+          <div className="flex flex-col py-2">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</p>
-            <p className="text-sm">
-              {evento.gratuito ? "Gratuito" : "Pago"}
-              {isDono && !evento.realizado && (
-                <button
-                  onClick={() => handleSalvarCampo("gratuito", (!evento.gratuito).toString())}
-                  className="ml-2 p-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded"
-                  aria-label="Alterar tipo"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
+
+            <div className="flex items-center mt-1 gap-3">
+              {editandoTipo ? (
+                <>
+                  <select
+                    defaultValue={evento?.gratuito ? "gratuito" : "pago"}
+                    onChange={async (e) => {
+                      const isGratuito = e.target.value === "gratuito";
+                      setEditandoTipo(false); 
+
+                      if (!supabase || !evento) return;
+
+                      const { error } = await supabase
+                        .from("eventos")
+                        .update({ gratuito: isGratuito })
+                        .eq("id", evento.id);
+
+                      if (error) {
+                        alert("Erro ao alterar tipo: " + error.message);
+                        return;
+                      }
+
+                      setEvento(prev => prev ? { ...prev, gratuito: isGratuito } : null);
+                    }}
+                    className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    autoFocus
+                  >
+                    <option value="gratuito">Gratuito</option>
+                    <option value="pago">Pago</option>
+                  </select>
+
+                  <button
+                    onClick={() => setEditandoTipo(false)}
+                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    aria-label="Cancelar"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">
+                    {evento?.gratuito ? (
+                      <span className="text-green-600 dark:text-green-400">Gratuito</span>
+                    ) : (
+                      <span className="text-orange-600 dark:text-orange-400">Pago</span>
+                    )}
+                  </p>
+
+                  {isDono && !evento?.realizado && (
+                    <button
+                      onClick={() => setEditandoTipo(true)}
+                      className="p-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition"
+                      aria-label="Editar tipo"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
               )}
-            </p>
+            </div>
           </div>
 
-          {podeSeInscrever && (
-            <button
-              onClick={handleInscricao}
-              className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
-            >
-              Inscrever-se
-            </button>
-          )}
+          {renderBotaoInscricao()}
         </div>
       </div>
 

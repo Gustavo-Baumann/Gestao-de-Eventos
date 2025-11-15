@@ -378,7 +378,7 @@ const Feed = () => {
                             }}
                             aria-label={`Ver detalhes do evento ${evento.nome}`}
                           >
-                            Ver detalhes do evento
+                            Detalhes do evento
                           </a>
                         </div>
                       </div>

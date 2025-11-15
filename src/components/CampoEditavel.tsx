@@ -62,7 +62,7 @@ export default function CampoEditavel({
           className={`
             p-2 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-purple-500
             ${disabled
-              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              ? 'hidden'
               : 'text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20'
             }
           `}

@@ -142,7 +142,7 @@ const CriarEvento = () => {
                 <input
                   type="time"
                   value={horaRealizacao}
-                  onChange={(e) => setHoraRealizacao(e.target.value)} // SÓ HORA
+                  onChange={(e) => setHoraRealizacao(e.target.value)} 
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-black dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                   aria-required="true"
@@ -167,7 +167,7 @@ const CriarEvento = () => {
                 <input
                   type="time"
                   value={horaEncerramento}
-                  onChange={(e) => setHoraEncerramento(e.target.value)} // SÓ HORA
+                  onChange={(e) => setHoraEncerramento(e.target.value)} 
                   required
                   className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-black dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                   aria-required="true"
