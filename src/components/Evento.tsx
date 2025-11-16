@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Pencil, X, Trash2, Upload, Loader2, Search, XCircle, CheckCircle } from "lucide-react";
+import { Pencil, X, Trash2, Upload, Loader2, Search, XCircle, CheckCircle, Ticket } from "lucide-react";
 import { useUsuario } from "../context/UsuarioContext";
 import Header from "./Header";
 import CampoEditavel from "./CampoEditavel";
@@ -83,7 +83,7 @@ const Evento = () => {
       .from("inscricoes")
       .select("*", { count: "exact", head: true })
       .eq("evento_id", evento.id)
-      .in("status", ["confirmada"]); 
+      .eq("status", ["confirmada"]); 
 
     if (!error && count !== null) {
       setInscritosCount(count);
@@ -249,6 +249,19 @@ const Evento = () => {
   };
 
   const renderBotaoInscricao = () => {
+
+    if (perfil?.tipo_usuario === "organizador" && isDono) {
+    return (
+      <button
+        onClick={() => navigate(`/evento/${eventoIdNum}/inscricoes`)}
+        className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition font-medium flex items-center justify-center gap-2 shadow-md"
+      >
+        <Ticket className="w-5 h-5" />
+        Gerenciar Inscrições
+      </button>
+    );
+  }
+
     if (!perfil || perfil.tipo_usuario !== "cliente" || evento?.realizado) {
       return null;
     }
@@ -339,6 +352,7 @@ const Evento = () => {
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
+      navigate("/");
     }
   };
 
@@ -432,28 +446,6 @@ const Evento = () => {
     } catch (err: any) {
       alert("Erro ao deletar imagem: " + err.message);
     }
-  };
-
-  const validarDatas = (novaRealizacao?: string, novaEncerramento?: string) => {
-    const realizacao = novaRealizacao || evento?.data_realizacao;
-    const encerramento = novaEncerramento || evento?.data_encerramento;
-    const agora = new Date();
-    agora.setSeconds(0, 0);
-
-    if (!realizacao || !encerramento) return false;
-
-    const dtRealizacao = new Date(realizacao);
-    const dtEncerramento = new Date(encerramento);
-
-    if (dtRealizacao < agora) {
-      alert("A data de realização não pode ser no passado.");
-      return false;
-    }
-    if (dtEncerramento < dtRealizacao) {
-      alert("A data de encerramento não pode ser antes da realização.");
-      return false;
-    }
-    return true;
   };
 
   if (loading) {

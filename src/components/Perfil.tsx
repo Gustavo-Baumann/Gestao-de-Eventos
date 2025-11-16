@@ -58,20 +58,21 @@ export default function Perfil() {
   const temImagem = !!perfil.imagem_url;
 
   return (
-    <div className="min-h-screen bg-neutral-200 pt-20 md:pt-20 p-4">
-      <Header titulo={isProprioPerfil ? 'Meu Perfil' : `Perfil de @${perfil.nome}`} />
-      <div className="max-w-lg mx-auto">
-        <div className="bg-white border border-blue-200 rounded-xl p-6 shadow-sm">
-          <div className="flex justify-center mb-6 relative">
+    <div className="min-h-screen bg-neutral-200 dark:bg-neutral-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg">
+        <Header titulo={isProprioPerfil ? 'Meu Perfil' : `Perfil de @${perfil.nome}`} />
+
+        <div className="bg-white dark:bg-neutral-800 border border-blue-200 dark:border-blue-700 rounded-xl p-8 shadow-sm mt-6">
+          <div className="flex justify-center mb-6">
             <div className="relative">
               {temImagem ? (
                 <img
                   src={perfil.imagem_url}
                   alt={`Foto de perfil de ${perfil.nome}`}
-                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
+                  className="w-28 h-28 rounded-full object-cover border-4 border-white dark:border-neutral-800 shadow-lg"
                 />
               ) : (
-                <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-2xl border-4 border-white shadow-md">
+                <div className="w-28 h-28 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold text-4xl border-4 border-white dark:border-neutral-800 shadow-lg">
                   {perfil.nome.charAt(0).toUpperCase()}
                 </div>
               )}
@@ -80,24 +81,24 @@ export default function Perfil() {
                 <button
                   onClick={() => setModalAberto(true)}
                   disabled={imagemCarregando}
-                  className="absolute bottom-0 right-0 bg-purple-600 text-white p-2 rounded-full shadow-lg hover:bg-purple-700 transition transform translate-x-1 translate-y-1 disabled:opacity-50"
+                  className="absolute bottom-0 right-0 bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition disabled:opacity-50"
                   aria-label="Alterar foto de perfil"
                 >
                   {imagemCarregando ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Camera className="w-5 h-5" />
+                    <Camera className="w-6 h-6" />
                   )}
                 </button>
               )}
             </div>
           </div>
 
-          <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 text-center mb-8">
             @{perfil.nome}
           </h1>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {isProprioPerfil ? (
               <>
                 <CampoEditavel
@@ -123,24 +124,24 @@ export default function Perfil() {
             ) : (
               <>
                 {perfil.numero_celular && (
-                  <div className="py-2">
-                    <p className="text-sm font-medium text-gray-700">Celular</p>
-                    <p className="text-sm text-gray-900">{perfil.numero_celular}</p>
+                  <div className="py-3">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Celular</p>
+                    <p className="text-base text-gray-900 dark:text-gray-100 mt-1">{perfil.numero_celular}</p>
                   </div>
                 )}
                 {perfil.data_nascimento && (
-                  <div className="py-2">
-                    <p className="text-sm font-medium text-gray-700">Data de Nascimento</p>
-                    <p className="text-sm text-gray-900">
+                  <div className="py-3">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Data de Nascimento</p>
+                    <p className="text-base text-gray-900 dark:text-gray-100 mt-1">
                       {new Date(perfil.data_nascimento).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                 )}
-                <div className="py-2">
-                  <p className="text-sm font-medium text-gray-700">Cidade</p>
-                  <p className="text-sm text-gray-900">
+                <div className="py-3">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Cidade</p>
+                  <div className="mt-1">
                     <CidadeDisplay cidade_id={perfil.cidade_id} />
-                  </p>
+                  </div>
                 </div>
               </>
             )}

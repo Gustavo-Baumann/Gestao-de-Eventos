@@ -43,7 +43,7 @@ const Feed = () => {
   const [carregando, setCarregando] = useState(true);
   const [mostrarPassados, setMostrarPassados] = useState(false);
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const [cidadeAlvo, setCidadeAlvo] = useState<number | null>(perfil?.cidade_id ?? null);
+  const [cidadeAlvo, setCidadeAlvo] = useState<number | null>(null);
   const [queryPesquisa, setQueryPesquisa] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<'nome' | 'cidade'>('nome');
 
@@ -70,11 +70,10 @@ const Feed = () => {
     setSidebarOpen(false);
   };
 
-  const buscarEventos = useCallback(async (query: string, tipo: 'nome' | 'cidade', cidadeId?: number | null) => {
+  const buscarEventos = useCallback(async () => {
     if (!perfil || !supabase) return;
 
     setCarregando(true);
-    setQueryPesquisa(query);
 
     let queryBuilder = supabase
       .from('eventos')
@@ -95,12 +94,17 @@ const Feed = () => {
       .eq('realizado', mostrarPassados)
       .order('data_realizacao', { ascending: true });
 
-    if (tipo === 'cidade' && cidadeAlvo !== null && typeof cidadeAlvo === 'number' && !isNaN(cidadeAlvo)) {
-      queryBuilder = queryBuilder.eq('cidade', cidadeAlvo);
+    if (tipoFiltro === 'cidade') {
+      const cidadeParaUsar = cidadeAlvo ?? perfil?.cidade_id;
+      if (cidadeParaUsar) {
+        queryBuilder = queryBuilder.eq('cidade', cidadeParaUsar);
+      }
+    } else if (tipoFiltro === 'nome' && !queryPesquisa.trim() && perfil?.cidade_id) {
+      queryBuilder = queryBuilder.eq('cidade', perfil.cidade_id);
     }
 
-    if (tipo === 'nome' && query.trim()) {
-      queryBuilder = queryBuilder.ilike('nome', `%${query.trim()}%`);
+    if (tipoFiltro === 'nome' && queryPesquisa.trim()) {
+      queryBuilder = queryBuilder.ilike('nome', `%${queryPesquisa.trim()}%`);
     }
 
     const { data, error } = await queryBuilder;
@@ -124,21 +128,20 @@ const Feed = () => {
     }
     setCarregando(false);
     setPaginaAtual(1);
-  }, [perfil, supabase, mostrarPassados, cidadeAlvo]);
-
-  useEffect(() => {
-    if (tipoFiltro === 'cidade') {
-      buscarEventos('', 'cidade');
-    } else {
-      buscarEventos(queryPesquisa, 'nome');
-    }
-  }, [cidadeAlvo, mostrarPassados, tipoFiltro, queryPesquisa, buscarEventos]);
+  }, [perfil, supabase, mostrarPassados, tipoFiltro, cidadeAlvo, queryPesquisa]);
 
   useEffect(() => {
     if (perfil?.cidade_id) {
-      buscarEventos('', 'nome');
+      setCidadeAlvo(null); 
+      setQueryPesquisa(''); 
+      setTipoFiltro('nome');
+      buscarEventos();
     }
-  }, [perfil?.cidade_id]);
+  }, [perfil?.cidade_id]); 
+
+  useEffect(() => {
+    buscarEventos();
+  }, [buscarEventos]);
 
   const totalPaginas = Math.ceil(eventos.length / ITENS_POR_PAGINA);
   const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
@@ -150,11 +153,24 @@ const Feed = () => {
       <BarraSuperior
         onBuscar={(query, tipo) => {
           if (tipo === 'nome') {
-            buscarEventos(query, 'nome');
+            setQueryPesquisa(query.trim());
+            setCidadeAlvo(null);           
+          } else if (tipo === 'cidade') {
+            setQueryPesquisa('');         
           }
+          setTipoFiltro(tipo);
         }}
         tipoFiltro={tipoFiltro}
-        setTipoFiltro={setTipoFiltro}
+        setTipoFiltro={(novoTipo) => {
+          setTipoFiltro(novoTipo);
+
+          if (novoTipo === 'cidade') {
+            setQueryPesquisa(''); 
+            if (cidadeAlvo === null) {
+              setCidadeAlvo(perfil?.cidade_id ?? null);
+            }
+          }
+        }}
         cidadeAlvo={cidadeAlvo}
         setCidadeAlvo={setCidadeAlvo}
         perfilCidadeId={perfil?.cidade_id ?? null}

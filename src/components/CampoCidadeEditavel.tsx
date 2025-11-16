@@ -40,8 +40,7 @@ export default function CampoCidadeEditavel({ cidade_id, onSalvar }: CampoCidade
           uf: estado?.uf || '',
         });
       });
-  }, [cidade_id]);
-
+  }, [cidade_id, supabase]);
 
   useEffect(() => {
     const delay = setTimeout(() => {
@@ -69,13 +68,15 @@ export default function CampoCidadeEditavel({ cidade_id, onSalvar }: CampoCidade
     }, 300);
 
     return () => clearTimeout(delay);
-  }, [busca]);
+  }, [busca, supabase]);
 
   const handleSalvar = async (novoId: number) => {
     setSalvando(true);
     try {
       await onSalvar(novoId);
       setEditando(false);
+      setBusca('');
+      setCidades([]);
     } catch {
       alert('Erro ao salvar cidade.');
     } finally {
@@ -93,14 +94,14 @@ export default function CampoCidadeEditavel({ cidade_id, onSalvar }: CampoCidade
     return (
       <div className="flex items-center justify-between py-2">
         <div>
-          <p className="text-sm font-medium text-gray-700">Cidade</p>
-          <p className="text-sm text-gray-900">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Cidade</p>
+          <p className="text-sm text-gray-900 dark:text-gray-100">
             {cidadeAtual ? `${cidadeAtual.nome} - ${cidadeAtual.uf}` : 'Não informada'}
           </p>
         </div>
         <button
           onClick={() => setEditando(true)}
-          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-purple-500"
           aria-label="Editar cidade"
         >
           <Pencil className="w-4 h-4" />
@@ -111,7 +112,7 @@ export default function CampoCidadeEditavel({ cidade_id, onSalvar }: CampoCidade
 
   return (
     <div className="py-2">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         Cidade
       </label>
       <div className="relative">
@@ -120,16 +121,24 @@ export default function CampoCidadeEditavel({ cidade_id, onSalvar }: CampoCidade
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Digite o nome da cidade"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className={`
+            w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
+            bg-white dark:bg-neutral-800
+            border-gray-300 dark:border-gray-600
+            text-gray-900 dark:text-gray-100
+            placeholder:text-gray-500 dark:placeholder:text-gray-400
+          `}
           autoFocus
         />
+
         {cidades.length > 0 && (
-          <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+          <ul className="absolute z-50 w-full bottom-full mb-1 bg-white dark:bg-neutral-800 border 
+          border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-60 overflow-auto">
             {cidades.map((cidade) => (
               <li
                 key={cidade.codigo_ibge}
                 onClick={() => handleSalvar(cidade.codigo_ibge)}
-                className="px-4 py-2 hover:bg-purple-50 cursor-pointer focus:bg-purple-100 focus:outline-none"
+                className="px-4 py-3 hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer transition focus:bg-purple-100 dark:focus:bg-purple-900/50 focus:outline-none"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -138,18 +147,22 @@ export default function CampoCidadeEditavel({ cidade_id, onSalvar }: CampoCidade
                   }
                 }}
               >
-                {cidade.nome} - {cidade.uf}
+                <span className="text-gray-900 dark:text-gray-100 font-medium">{cidade.nome}</span>
+                <span className="text-gray-600 dark:text-gray-400 text-sm ml-2">- {cidade.uf}</span>
               </li>
             ))}
           </ul>
         )}
       </div>
-      <div className="flex gap-2 mt-2">
+
+      <div className="flex gap-2 mt-3">
         <button
           onClick={handleCancelar}
-          className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition text-sm"
+          disabled={salvando}
+          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium text-sm flex items-center gap-2 disabled:opacity-50"
         >
-          <X className="w-4 h-4 inline mr-1" /> Cancelar
+          <X className="w-4 h-4" />
+          Cancelar
         </button>
       </div>
     </div>

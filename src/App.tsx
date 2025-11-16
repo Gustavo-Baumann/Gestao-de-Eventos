@@ -7,6 +7,7 @@ import { useAuth } from './hooks/useAuth'
 import { TemaProvider } from './context/TemaContext'
 import { UsuarioProvider } from './context/UsuarioContext'
 import Evento from './components/Evento'
+import Inscricoes from './components/Inscricoes'
 
 const Feed = React.lazy(() => import('./components/Feed'));
 const Cadastro = React.lazy(() => import('./components/Cadastro'));
@@ -40,6 +41,7 @@ function App() {
             <Route path='/configuracoes' element={ sessao ? <Configuracoes /> : <Navigate to="/login" replace />} />
             <Route path='/criar-evento' element={ sessao ? <CriarEvento /> : <Navigate to="/login" replace />} />
             <Route path='/evento/:id' element={ sessao ? <Evento /> : <Navigate to="/login" replace />} />
+            <Route path='/evento/:id/inscricoes' element={ sessao ? <Inscricoes /> : <Navigate to="/login" replace />} />
             <Route path='/meus-eventos' element={ sessao ? <MeusEventos /> : <Navigate to="/login" replace />} />
             <Route path='/erro' element={<Erro />} /> 
             <Route path='*' element={<Fallback />} />

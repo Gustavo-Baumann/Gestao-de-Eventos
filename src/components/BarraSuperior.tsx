@@ -169,7 +169,7 @@ const BarraSuperior = ({
                 setInputValue('');
                 setSugestoes([]);
                 if (novoTipo === 'cidade') {
-                  setCidadeAlvo(perfilCidadeId);
+                  setCidadeAlvo(perfilCidadeId ?? null);  
                 }
               }}
               className="h-full px-2 bg-white text-gray-800 rounded-r-lg focus:outline-none text-xs min-w-[80px]"
