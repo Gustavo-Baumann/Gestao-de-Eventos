@@ -242,14 +242,6 @@ const BarraSuperior = ({
             </button>
 
             <button
-              onClick={() => navigate('/configuracoes')}
-              className="p-2 bg-purple-700 hover:bg-purple-800 rounded-lg transition-colors"
-              aria-label="Configurações"
-            >
-              <Cog6ToothIcon className="w-5 h-5" />
-            </button>
-
-            <button
               onClick={handleToggleDarkMode}
               className="p-2 bg-purple-700 hover:bg-purple-800 rounded-lg transition-colors"
               aria-label={tema === 'escuro' ? 'Ativar modo claro' : 'Ativar modo escuro'}
@@ -293,15 +285,6 @@ const BarraSuperior = ({
             >
               <UserCircleIcon className="w-5 h-5" />
               <span>Meu Perfil</span>
-            </button>
-
-            <button
-              onClick={() => { navigate('/configuracoes'); setMenuOpen(false); }}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-purple-800 rounded-lg text-sm"
-              role="menuitem"
-            >
-              <Cog6ToothIcon className="w-5 h-5" />
-              <span>Configurações</span>
             </button>
 
             <button

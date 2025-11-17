@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { CheckCircle, XCircle, Trash2, Loader2, User } from "lucide-react";
 import Header from "./Header";
 import { useUsuario } from "../context/UsuarioContext";
+import Container from "./Container";
 
 interface Inscricao {
   id: number;
@@ -131,7 +132,7 @@ const Inscricoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4">
+    <Container>
       <Header titulo="Gerenciar Inscrições" />
 
       <div className="flex justify-center">
@@ -259,7 +260,7 @@ const Inscricoes = () => {
           )}
         </div>
       </div>
-    </div>
+    </Container>
   );
 };
 

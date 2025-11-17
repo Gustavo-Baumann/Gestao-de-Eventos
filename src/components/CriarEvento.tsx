@@ -2,9 +2,10 @@ import { useState, useRef } from 'react';
 import Header from './Header';
 import { useUsuario } from '../context/UsuarioContext';
 import CidadeSelect from './CidadeSelect';
+import Container from './Container';
 
 const CriarEvento = () => {
-  const { perfil, criarEvento } = useUsuario();
+  const { perfil, criarEvento, logout } = useUsuario();
 
   const [nome, setNome] = useState('');
   const [dataRealizacao, setDataRealizacao] = useState(''); 
@@ -88,6 +89,71 @@ const CriarEvento = () => {
       setEnviando(false);
     }
   };
+
+  if(perfil?.tipo_usuario == 'cliente'){
+    return (
+      <Container>
+        <Header titulo="Meus Eventos" />
+        <div className="flex items-center justify-center min-h-[calc(100vh-5rem)]">
+          <div className="w-full max-w-lg">
+            <div className="bg-white dark:bg-neutral-900 border border-purple-200 dark:border-purple-700 rounded-xl p-8 shadow-sm">
+              <div className="flex justify-center mb-6">
+                <div
+                  className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center"
+                  aria-hidden="true"
+                >
+                  <svg
+                    className="w-10 h-10 text-purple-600 dark:text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 text-center mb-3">
+                Permissão insuficiente
+              </h1>
+
+              <p className="text-sm text-gray-600 dark:text-gray-300 text-center mb-6">
+                Sua conta não tem permissão para criar eventos. Use uma conta do tipo{' '}
+                <span className="font-medium text-purple-600 dark:text-purple-400">
+                  organizador
+                </span>{' '}
+                para criar seus eventos.
+              </p>
+
+              <div
+                role="status"
+                aria-live="polite"
+                className="text-sm text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded-lg p-4 mb-6 text-center"
+              >
+                Entre com uma conta de organizador ou solicite acesso ao administrador.
+              </div>
+
+              <button
+                onClick={() => {
+                  logout(); 
+                }}
+                className="w-full max-w-md mx-auto block text-center py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-800 transition duration-200"
+                aria-label="Fazer login como organizador"
+              >
+                Fazer login como organizador
+              </button>
+            </div>
+          </div>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4">

@@ -8,9 +8,10 @@ interface CampoEditavelProps {
     | keyof import('../context/UsuarioContext').PerfilUsuario
     | keyof import('../components/Evento').EventoData;
   onSalvar: (novoValor: string) => Promise<void>;
-  tipo?: 'text' | 'tel' | 'date' | 'datetime-local';
+  tipo?: 'text' | 'tel' | 'date' | 'datetime-local' | 'textarea';
+  rows?: number;       
   placeholder?: string;
-  disabled?: boolean; 
+  disabled?: boolean;
 }
 
 export default function CampoEditavel({
@@ -19,6 +20,7 @@ export default function CampoEditavel({
   campo,
   onSalvar,
   tipo = 'text',
+  rows = 4,                
   placeholder,
   disabled = false,
 }: CampoEditavelProps) {
@@ -51,7 +53,7 @@ export default function CampoEditavel({
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {label}
           </p>
-          <p className="text-sm text-gray-900 dark:text-gray-100">
+          <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
             {valor || 'Não informado'}
           </p>
         </div>
@@ -76,58 +78,81 @@ export default function CampoEditavel({
   }
 
   return (
-    <div className="flex items-end gap-2 py-2">
-      <div className="flex-1">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {label}
-        </label>
-        <input
-          type={tipo}
-          value={novoValor}
-          onChange={(e) => setNovoValor(e.target.value)}
-          placeholder={placeholder}
-          className={`
-            w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
-            bg-white dark:bg-neutral-800
-            border-gray-300 dark:border-gray-600
-            text-gray-900 dark:text-gray-100
-            placeholder:text-gray-500 dark:placeholder:text-gray-400
-          `}
-          autoFocus
-        />
+    <div className="flex flex-col gap-3 py-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}
+      </label>
+
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          {tipo === 'textarea' ? (
+            <textarea
+              value={novoValor}
+              onChange={(e) => setNovoValor(e.target.value)}
+              rows={rows}
+              placeholder={placeholder}
+              className={`
+                w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
+                bg-white dark:bg-neutral-800
+                border-gray-300 dark:border-gray-600
+                text-gray-900 dark:text-gray-100
+                placeholder:text-gray-500 dark:placeholder:text-gray-400
+                resize-none
+              `}
+              autoFocus
+            />
+          ) : (
+            <input
+              type={tipo}
+              value={novoValor}
+              onChange={(e) => setNovoValor(e.target.value)}
+              placeholder={placeholder}
+              className={`
+                w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
+                bg-white dark:bg-neutral-800
+                border-gray-300 dark:border-gray-600
+                text-gray-900 dark:text-gray-100
+                placeholder:text-gray-500 dark:placeholder:text-gray-400
+              `}
+              autoFocus
+            />
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleSalvar}
+            disabled={salvando}
+            className={`
+              p-2.5 rounded-lg transition flex items-center justify-center
+              ${salvando
+                ? 'bg-purple-400 cursor-wait'
+                : 'bg-purple-600 hover:bg-purple-700'
+              } text-white
+            `}
+            aria-label="Salvar alterações"
+          >
+            {salvando ? (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Check className="w-4 h-4" />
+            )}
+          </button>
+
+          <button
+            onClick={handleCancelar}
+            className={`
+              p-2.5 rounded-lg transition
+              bg-gray-200 dark:bg-gray-700
+              text-gray-700 dark:text-gray-300
+              hover:bg-gray-300 dark:hover:bg-gray-600
+            `}
+            aria-label="Cancelar edição"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
-
-      <button
-        onClick={handleSalvar}
-        disabled={salvando}
-        className={`
-          p-2 rounded-lg transition flex items-center justify-center
-          ${salvando
-            ? 'bg-purple-400 cursor-wait'
-            : 'bg-purple-600 hover:bg-purple-700'
-          } text-white
-        `}
-        aria-label="Salvar alterações"
-      >
-        {salvando ? (
-          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <Check className="w-4 h-4" />
-        )}
-      </button>
-
-      <button
-        onClick={handleCancelar}
-        className={`
-          p-2 rounded-lg transition
-          bg-gray-200 dark:bg-gray-700
-          text-gray-700 dark:text-gray-300
-          hover:bg-gray-300 dark:hover:bg-gray-600
-        `}
-        aria-label="Cancelar edição"
-      >
-        <X className="w-4 h-4" />
-      </button>
     </div>
   );
 }

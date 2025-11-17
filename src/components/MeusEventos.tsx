@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import Paginacao from '../components/Paginacao';
 import { useUsuario } from '../context/UsuarioContext';
 import Carregando from './Carregando';
+import Container from './Container';
 
 interface Evento {
   id: number;
@@ -87,16 +88,16 @@ const MeusEventos = () => {
 
   if (carregando) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4">
+      <Container>
         <Header titulo="Meus Eventos" />
         <Carregando />
-      </div>
+      </Container>
     );
   }
 
   if(perfil?.tipo_usuario == 'cliente'){
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4">
+      <Container>
         <Header titulo="Meus Eventos" />
         <div className="flex items-center justify-center min-h-[calc(100vh-5rem)]">
           <div className="w-full max-w-lg">
@@ -155,7 +156,7 @@ const MeusEventos = () => {
             </div>
           </div>
         </div>
-      </div>
+      </Container>
     );
   }
 

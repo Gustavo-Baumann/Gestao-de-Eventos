@@ -4,6 +4,7 @@ import { Pencil, X, Trash2, Upload, Loader2, Search, XCircle, CheckCircle, Ticke
 import { useUsuario } from "../context/UsuarioContext";
 import Header from "./Header";
 import CampoEditavel from "./CampoEditavel";
+import Container from "./Container";
 
 export interface EventoData {
   id: number;
@@ -52,7 +53,9 @@ const Evento = () => {
   const [inscricaoId, setInscricaoId] = useState<number | null>(null);
   const [carregandoInscricao, setCarregandoInscricao] = useState(true);
   const [processandoInscricao, setProcessandoInscricao] = useState(false);
-  const [inscritosCount, setInscritosCount] = useState<number>(0);
+  const [inscritosCount, setInscritosCount] = useState<number | null>(null);
+  const [editandoVagas, setEditandoVagas] = useState(false);
+  const [novoNumeroVagas, setNovoNumeroVagas] = useState(0);
 
   const isDono = userId === evento?.id_criador;
   const eventoIdNum = Number(id);
@@ -87,6 +90,8 @@ const Evento = () => {
 
     if (!error && count !== null) {
       setInscritosCount(count);
+    }else {
+      setInscritosCount(0);
     }
   };
 
@@ -153,6 +158,12 @@ const Evento = () => {
 
     fetchTudo();
   }, [id, supabase, userId]);
+
+  useEffect(() => {
+    if (evento?.id) {
+      buscarInscritosCount();
+    }
+  }, [evento?.id]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -458,10 +469,10 @@ const Evento = () => {
 
   if (error || !evento || !criador) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4">
+      <Container>
         <Header titulo="Visualização do Evento" />
         <p className="text-red-600 text-center">{error || "Evento não encontrado"}</p>
-      </div>
+      </Container>
     );
   }
 
@@ -482,18 +493,14 @@ const Evento = () => {
 };
 
   const vagasTotais = evento?.numero_vagas || 0;
-  const estaLotado = vagasTotais > 0 && inscritosCount >= vagasTotais;
-
-  const vagasTexto = evento.numero_vagas
-    ? `${inscritosCount}/${evento.numero_vagas}`
-    : "Sem limite de vagas";
+  const estaLotado = vagasTotais > 0 && inscritosCount as number >= vagasTotais;
 
   const porcentagemPreenchida = vagasTotais > 0
-    ? Math.min(100, (inscritosCount / vagasTotais) * 100)
+    ? Math.min(100, (inscritosCount as number / vagasTotais) * 100)
     : 0;
 
   return (
-  <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4">
+  <Container>
     <Header titulo="Visualização do Evento" />
 
     <div className="max-w-3xl mx-auto space-y-0">
@@ -637,6 +644,7 @@ const Evento = () => {
             label="Descrição"
             valor={evento.descricao || ""}
             campo="descricao"
+            tipo="textarea"
             onSalvar={(v) => handleSalvarCampo("descricao", v)}
             disabled={!isDono || evento.realizado}
           />
@@ -708,15 +716,91 @@ const Evento = () => {
           )}
 
           <div className="space-y-3">
-            <div className="flex flex-col">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Vagas</p>
-              <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mt-1">
-                {vagasTexto}
-              </p>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Vagas</p>
+                <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mt-1">
+                  {evento?.numero_vagas && evento.numero_vagas > 0 ? (
+                    inscritosCount === null ? (
+                      <span className="inline-block w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    ) : (
+                      `${inscritosCount}/${evento.numero_vagas}`
+                    )
+                  ) : (
+                    "Vagas ilimitadas"
+                  )}
+                </p>
+              </div>
+
+              {isDono && !evento.realizado && !editandoVagas && (
+                <button
+                  onClick={() => setEditandoVagas(true)}
+                  className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition"
+                  aria-label="Editar número de vagas"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
+            {editandoVagas && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="0"
+                    defaultValue={evento.numero_vagas ?? 0}
+                    onChange={(e) => setNovoNumeroVagas(Number(e.target.value))}
+                    className="w-32 px-3 py-2 border rounded-lg bg-white dark:bg-neutral-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 dark:text-gray-100"
+                    autoFocus
+                  />
+
+                  <button
+                    onClick={() => setEditandoVagas(false)}
+                    className="p-2 bg-red-600 rounded-lg hover:bg-red-900 transition"
+                    aria-label="Cancelar"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (!supabase || !evento) return;
+
+                      const valor = Number(novoNumeroVagas);
+
+                      const { error } = await supabase
+                        .from("eventos")
+                        .update({ numero_vagas: valor })
+                        .eq("id", evento.id);
+
+                      if (error) {
+                        alert("Erro ao salvar: " + error.message);
+                        return;
+                      }
+
+                      setEvento((prev) =>
+                        prev ? { ...prev, numero_vagas: valor } : null
+                      );
+
+                      setEditandoVagas(false);
+                    }}
+                    className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                    aria-label="Salvar vagas"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Deixe em <strong>0</strong> para retirar o limite de vagas.
+                </p>
+              </div>
+            )}
+
             {vagasTotais > 0 && (
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden relative">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden relative mt-2">
                 <div
                   className={`h-full transition-all duration-500 ease-out ${
                     estaLotado ? "bg-red-500" : "bg-purple-600"
@@ -730,7 +814,9 @@ const Evento = () => {
                 )}
               </div>
             )}
+
           </div>
+
 
           <div className="flex flex-col py-2">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</p>
@@ -904,7 +990,7 @@ const Evento = () => {
         )}
       </div>
     </div>
-  </div>
+  </Container>
 );
 };
 

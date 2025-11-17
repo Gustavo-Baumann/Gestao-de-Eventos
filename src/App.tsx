@@ -6,8 +6,6 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { useAuth } from './hooks/useAuth'
 import { TemaProvider } from './context/TemaContext'
 import { UsuarioProvider } from './context/UsuarioContext'
-import Evento from './components/Evento'
-import Inscricoes from './components/Inscricoes'
 
 const Feed = React.lazy(() => import('./components/Feed'));
 const Cadastro = React.lazy(() => import('./components/Cadastro'));
@@ -16,8 +14,13 @@ const Configuracoes = React.lazy(() => import('./components/Configuracoes'));
 const Fallback = React.lazy(() => import('./components/Fallback'));
 const Perfil = React.lazy(() => import('./components/Perfil'));
 const Erro = React.lazy(() => import('./components/Erro'));
-const CriarEvento = React.lazy(() => import('./components/CriarEvento'))
-const MeusEventos = React.lazy(() => import('./components/MeusEventos'))
+const CriarEvento = React.lazy(() => import('./components/CriarEvento'));
+const MeusEventos = React.lazy(() => import('./components/MeusEventos'));
+const Evento = React.lazy(() => import('./components/Evento'));
+const Inscricoes = React.lazy(() => import('./components/Inscricoes'));
+const MinhasInscricoes = React.lazy(() => import('./components/MinhasInscricoes'));
+const Reviews = React.lazy(() => import('./components/Reviews'));
+
 
 function App() {
 
@@ -43,6 +46,8 @@ function App() {
             <Route path='/evento/:id' element={ sessao ? <Evento /> : <Navigate to="/login" replace />} />
             <Route path='/evento/:id/inscricoes' element={ sessao ? <Inscricoes /> : <Navigate to="/login" replace />} />
             <Route path='/meus-eventos' element={ sessao ? <MeusEventos /> : <Navigate to="/login" replace />} />
+            <Route path='/reviews' element={ sessao ? <Reviews /> : <Navigate to="/login" replace />} />
+            <Route path='/minhas-inscricoes' element={ sessao ? <MinhasInscricoes/> : <Navigate to="/login" replace />} />
             <Route path='/erro' element={<Erro />} /> 
             <Route path='*' element={<Fallback />} />
           </Routes>
