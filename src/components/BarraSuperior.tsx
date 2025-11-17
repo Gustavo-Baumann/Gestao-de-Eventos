@@ -3,7 +3,6 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   UserCircleIcon,
-  Cog6ToothIcon,
   SunIcon,
   MoonIcon,
   ArrowRightOnRectangleIcon,

@@ -10,7 +10,6 @@ import CidadeDisplay from './CidadeDisplay';
 import Fallback from './Fallback';
 import { Camera } from 'lucide-react';
 import ModalUploadImagem from './modalUploadImagem';
-import Container from './Container';
 
 export default function Perfil() {
   const { nome: slug } = useParams<{ nome: string }>();

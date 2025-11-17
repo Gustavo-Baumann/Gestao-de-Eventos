@@ -17,7 +17,6 @@ interface CampoEditavelProps {
 export default function CampoEditavel({
   label,
   valor,
-  campo,
   onSalvar,
   tipo = 'text',
   rows = 4,                

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { resetAndRecreateClient, getSupabaseClient } from '../supabase-client'
+import { resetAndRecreateClient } from '../supabase-client'
 
 export function useSupabaseVisibility() {
   useEffect(() => {
@@ -12,12 +12,7 @@ export function useSupabaseVisibility() {
       }
 
       if (wasHidden) {
-        resetAndRecreateClient()
-
-        setTimeout(() => {
-          getSupabaseClient().auth.getSession().then(({ data }) => {
-          })
-        }, 100)
+        resetAndRecreateClient();
         wasHidden = false
       }
     }

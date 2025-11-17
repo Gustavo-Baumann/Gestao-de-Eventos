@@ -57,7 +57,6 @@ export function UsuarioProvider({ children }: { children: ReactNode }) {
       setErro(null);
 
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
       if (sessionError || !session?.user) {
         setPerfil(null);
         setUserId(null);
@@ -122,7 +121,7 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
   const extensao = file.name.split('.').pop()?.toLowerCase();
   const nomeArquivo = `private/${perfil.nome}-${Date.now()}.${extensao}`;
 
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('imagens_perfil')
     .upload(nomeArquivo, file, {
       cacheControl: '3600',
