@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSupabaseClient } from "../supabase-client"
+import { Eye, EyeOff } from 'lucide-react'
 
 interface FormData {
   email: string;
@@ -38,6 +39,10 @@ export default function Cadastro() {
   const [erro,setErro] = useState<string | null>(null)
   const [erroDataNascimento, setErroDataNascimento] = useState<string | null>(null);
   const [dadosAnteriores, setDadosAnteriores] = useState<FormData | null>(null);
+  const [confirmarSenha, setConfirmarSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false)
+  const [erroSenhaConfirmacao, setErroSenhaConfirmacao] = useState<string | null>(null)
 
   const salvarDadosTemporarios = () => {
     localStorage.setItem('cadastro_pendente', JSON.stringify(form));
@@ -136,11 +141,22 @@ useEffect(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErro(null)
+    setErro(null);
+    setErroSenhaConfirmacao(null);
 
     const erroData = validarDataNascimento(form.data_nascimento);
     if (erroData) {
       setErroDataNascimento(erroData);
+      return;
+    }
+
+    if (form.password !== confirmarSenha) {
+      setErroSenhaConfirmacao('As senhas não coincidem.')
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setErro('A senha deve ter pelo menos 6 caracteres.')
       return;
     }
 
@@ -265,7 +281,7 @@ useEffect(() => {
     return 'Data muito antiga. Verifique o ano.';
   }
 
-  const idadeMinima = 13;
+  const idadeMinima = 18;
   const dataMinIdade = new Date(hoje.getFullYear() - idadeMinima, hoje.getMonth(), hoje.getDate());
   if (dataNasc > dataMinIdade) {
     return `Você precisa ter pelo menos ${idadeMinima} anos.`;
@@ -305,20 +321,64 @@ useEffect(() => {
               <label htmlFor="password" className="text-sm font-medium text-gray-700 mb-1">
                 Senha
               </label>
-              <input
-                id="password"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-                minLength={6}
-                placeholder="Mínimo 6 caracteres"
-                aria-label="Senha de acesso"
-                aria-required="true"
-                autoComplete="new-password"
-                className="max-w-md w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                  minLength={6}
+                  placeholder="Mínimo 6 caracteres"
+                  aria-label="Senha de acesso"
+                  aria-required="true"
+                  autoComplete="new-password"
+                  className="max-w-md w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
+
+            <div className="flex flex-col">
+              <label htmlFor="confirmar-senha" className="text-sm font-medium text-gray-700 mb-1">
+                Confirmar senha
+              </label>
+              <div className="relative">
+                <input
+                  id="confirmar-senha"
+                  type={mostrarConfirmarSenha ? 'text' : 'password'}
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                  required
+                  placeholder="Digite a senha novamente"
+                  aria-label="Confirmação da senha"
+                  aria-required="true"
+                  autoComplete="new-password"
+                  className="max-w-md w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label={mostrarConfirmarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {mostrarConfirmarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+
+            {erroSenhaConfirmacao && (
+              <p className="mt-1 text-sm text-red-600" role="alert">
+                {erroSenhaConfirmacao}
+              </p>
+            )}
 
             <div className="flex flex-col">
               <label htmlFor="nome" className="text-sm font-medium text-gray-700 mb-1">

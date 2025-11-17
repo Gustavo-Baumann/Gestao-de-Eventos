@@ -40,8 +40,8 @@ const CriarEvento = () => {
       return;
     }
 
-    const dataRealizacaoISO = `${dataRealizacao}T${horaRealizacao}:00`;
-    const dataEncerramentoISO = `${dataEncerramento}T${horaEncerramento}:00`;
+    const dataRealizacaoISO = new Date(`${dataRealizacao}T${horaRealizacao}:00`).toISOString();
+    const dataEncerramentoISO = new Date(`${dataEncerramento}T${horaEncerramento}:00`).toISOString();
 
     if (!nome.trim()) return setErro('Nome é obrigatório.');
     if (!dataRealizacao || !horaRealizacao) return setErro('Data e hora de realização são obrigatórias.');

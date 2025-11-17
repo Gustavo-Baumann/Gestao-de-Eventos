@@ -1,20 +1,22 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSupabaseClient } from '../supabase-client'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [carregando, setCarregando] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const navigate = useNavigate()
-  const supabase = getSupabaseClient()
+  const navigate = useNavigate();
+  const supabase = getSupabaseClient();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCarregando(true)
-    setErro(null)
+    e.preventDefault();
+    setCarregando(true);
+    setErro(null);
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -22,8 +24,8 @@ export default function Login() {
     })
 
     if (error) {
-      setErro(error.message)
-      setCarregando(false)
+      setErro(error.message);
+      setCarregando(false);
     }
   }
 
@@ -58,24 +60,31 @@ export default function Login() {
             </div>
 
             <div className="flex flex-col">
-              <label
-                htmlFor="password"
-                className="text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="password" className="text-sm font-medium text-gray-700 mb-1">
                 Senha
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                aria-label="Senha de acesso"
-                aria-required="true"
-                autoComplete="current-password"
-                className="max-w-md w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  aria-label="Senha de acesso"
+                  aria-required="true"
+                  autoComplete="current-password"
+                  className="max-w-md w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             {erro && (

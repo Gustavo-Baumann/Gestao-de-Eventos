@@ -8,7 +8,6 @@ let _cachedClient: SupabaseClient | null = null
 
 export function getSupabaseClient(): SupabaseClient {
   if (!_cachedClient) {
-    console.log('Criando novo SupabaseClient');
     _cachedClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
@@ -18,8 +17,6 @@ export function getSupabaseClient(): SupabaseClient {
       },
     })
     _cachedClient.auth.startAutoRefresh();
-  }else{
-    console.log('Reutilizando SupabaseClient existente');
   }
   return _cachedClient
 }
