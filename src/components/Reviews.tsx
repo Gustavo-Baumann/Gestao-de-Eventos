@@ -28,12 +28,47 @@ const Reviews = () => {
   const { supabase, userId, perfil, logout } = useUsuario();
 
   const [itens, setItens] = useState<(InscricaoComEvento & { review?: ReviewExistente; carregandoReview?: boolean })[]>([]);
+  const [municipiosMap, setMunicipiosMap] = useState<Record<string, { nome: string; uf: string }>>({});
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState<Set<number>>(new Set());
   const [estrelasHover, setEstrelasHover] = useState<Record<number, number>>({});
   const [estrelasSelecionadas, setEstrelasSelecionadas] = useState<Record<number, number>>({});
   const [comentarios, setComentarios] = useState<Record<number, string>>({});
+
+  const buscarMunicipios = async (codigos: string[]) => {
+  if (!supabase || codigos.length === 0) return;
+
+  const { data: municipios } = await supabase
+    .from("municipios")
+    .select("codigo_ibge, nome, codigo_uf")
+    .in("codigo_ibge", codigos);
+
+  if (!municipios || municipios.length === 0) return;
+
+  const ufsUnicas = [...new Set(municipios.map(m => m.codigo_uf))].filter(Boolean);
+
+  const { data: estados } = await supabase
+    .from("estados")
+    .select("codigo_uf, uf")
+    .in("codigo_uf", ufsUnicas);
+
+  const ufMap = Object.fromEntries(
+    (estados || []).map(e => [e.codigo_uf, e.uf])
+  );
+
+  const map = Object.fromEntries(
+    municipios.map(m => [
+      m.codigo_ibge,
+      {
+        nome: m.nome,
+        uf: ufMap[m.codigo_uf] || "??"
+      }
+    ])
+  );
+
+  setMunicipiosMap(prev => ({ ...prev, ...map }));
+};
 
   const buscarInscricoesParaReview = async () => {
     if (!supabase || !userId) {
@@ -46,13 +81,12 @@ const Reviews = () => {
     setErro(null);
 
     try {
-      const { data: inscricoes, error: erro1 } = await supabase
+      const { data: inscricoes } = await supabase
         .from("inscricoes")
         .select("id, evento_id")
         .eq("usuario_id", userId)
         .eq("status", "confirmada");
 
-      if (erro1) throw erro1;
       if (!inscricoes || inscricoes.length === 0) {
         setItens([]);
         setCarregando(false);
@@ -61,32 +95,21 @@ const Reviews = () => {
 
       const eventoIds = inscricoes.map(i => i.evento_id);
 
-      const { data: eventos, error: erro2 } = await supabase
+      const { data: eventos } = await supabase
         .from("eventos")
-        .select(`
-          id,
-          nome,
-          banner_url,
-          data_realizacao,
-          cidade,
-          realizado
-        `)
+        .select("id, nome, banner_url, data_realizacao, cidade, realizado")
         .in("id", eventoIds)
-        .eq("realizado", true)
-        .order("data_realizacao", { ascending: false });
-
-      if (erro2) throw erro2;
-
-      const eventoMap = Object.fromEntries(eventos.map(e => [e.id, e]));
+        .eq("realizado", true);
 
       const itensFinais: (InscricaoComEvento & { review?: ReviewExistente })[] = [];
+      const codigosIbge: string[] = [];
 
-      for (const insc of inscricoes) {
-        const evento = eventoMap[insc.evento_id];
-        if (evento) {
+      eventos?.forEach(evento => {
+        const inscricao = inscricoes.find(i => i.evento_id === evento.id);
+        if (inscricao && evento.cidade) {
           itensFinais.push({
-            id: insc.id,
-            evento_id: insc.evento_id,
+            id: inscricao.id,
+            evento_id: evento.id,
             eventos: {
               id: evento.id,
               nome: evento.nome,
@@ -95,7 +118,14 @@ const Reviews = () => {
               cidade: evento.cidade,
             }
           });
+          if (!codigosIbge.includes(evento.cidade)) {
+            codigosIbge.push(evento.cidade);
+          }
         }
+      });
+
+      if (codigosIbge.length > 0) {
+        await buscarMunicipios(codigosIbge);
       }
 
       const inscricaoIds = itensFinais.map(i => i.id);
@@ -117,8 +147,7 @@ const Reviews = () => {
       }
 
       setItens(itensFinais.map(i => ({
-        ...i,
-        review: reviewsMap[i.id]
+        ...i, review: reviewsMap[i.id]
       })));
 
     } catch (err: any) {
@@ -217,6 +246,13 @@ const Reviews = () => {
 
   const formatarData = (data: string) => {
     return format(new Date(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const obterLocalizacao = (codigoIbge: string | null) => {
+    if (!codigoIbge) return null;
+    const municipio = municipiosMap[codigoIbge];
+    if (!municipio) return "Carregando...";
+    return `${municipio.nome}, ${municipio.uf}`;
   };
 
   if (perfil?.tipo_usuario === 'organizador') {
@@ -324,10 +360,10 @@ const Reviews = () => {
                                 <Calendar className="w-4 h-4" />
                                 {formatarData(evento.data_realizacao)}
                               </p>
-                              {evento.cidade && (
+                              {obterLocalizacao(evento.cidade) && (
                                 <p className="flex items-center gap-2">
                                   <MapPin className="w-4 h-4" />
-                                  {evento.cidade}
+                                  {obterLocalizacao(evento.cidade)}
                                 </p>
                               )}
                             </div>

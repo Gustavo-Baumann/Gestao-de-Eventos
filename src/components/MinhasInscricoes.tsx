@@ -23,9 +23,44 @@ const MinhasInscricoes = () => {
   const { supabase, userId, perfil, logout } = useUsuario();
 
   const [inscricoes, setInscricoes] = useState<MinhaInscricao[]>([]);
+  const [municipiosMap, setMunicipiosMap] = useState<Record<string, { nome: string; uf: string }>>({});
   const [carregando, setCarregando] = useState(true);
   const [processando, setProcessando] = useState<Set<number>>(new Set());
   const [erro, setErro] = useState<string | null>(null);
+
+  const buscarMunicipios = async (codigos: string[]) => {
+  if (!supabase || codigos.length === 0) return;
+
+  const { data: municipios } = await supabase
+    .from("municipios")
+    .select("codigo_ibge, nome, codigo_uf")
+    .in("codigo_ibge", codigos);
+
+  if (!municipios || municipios.length === 0) return;
+
+  const ufsUnicas = [...new Set(municipios.map(m => m.codigo_uf))].filter(Boolean);
+
+  const { data: estados } = await supabase
+    .from("estados")
+    .select("codigo_uf, uf")
+    .in("codigo_uf", ufsUnicas);
+
+  const ufMap = Object.fromEntries(
+    (estados || []).map(e => [e.codigo_uf, e.uf])
+  );
+
+  const map = Object.fromEntries(
+    municipios.map(m => [
+      m.codigo_ibge,
+      {
+        nome: m.nome,
+        uf: ufMap[m.codigo_uf] || "??"
+      }
+    ])
+  );
+
+  setMunicipiosMap(prev => ({ ...prev, ...map }));
+};
 
   const buscarMinhasInscricoes = async () => {
     if (!supabase || !userId) {
@@ -48,7 +83,8 @@ const MinhasInscricoes = () => {
           nome,
           banner_url,
           data_realizacao,
-          cidade
+          cidade,
+          realizado
         )
       `)
       .eq("usuario_id", userId)
@@ -57,8 +93,13 @@ const MinhasInscricoes = () => {
     if (error) {
       console.error("Erro ao buscar inscrições:", error);
       setErro("Erro ao carregar suas inscrições.");
-    } else {
-      const formatadas = (data || []).map((item: any) => ({
+      setCarregando(false);
+      return;
+    }
+
+    const formatadas = (data || [])
+      .filter((item: any) => item.eventos && !item.eventos.realizado)
+      .map((item: any) => ({
         id: item.id,
         status: item.status,
         created_at: item.created_at,
@@ -70,8 +111,17 @@ const MinhasInscricoes = () => {
           cidade: item.eventos.cidade,
         },
       }));
-      setInscricoes(formatadas);
+
+    setInscricoes(formatadas);
+
+    const codigosUnicos = [
+      ...new Set(formatadas.map((i: any) => i.eventos.cidade).filter(Boolean)),
+    ] as string[];
+
+    if (codigosUnicos.length > 0) {
+      buscarMunicipios(codigosUnicos);
     }
+
     setCarregando(false);
   };
 
@@ -104,6 +154,13 @@ const MinhasInscricoes = () => {
 
   const formatarData = (data: string) => {
     return format(new Date(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const obterLocalizacao = (codigoIbge: string | null) => {
+    if (!codigoIbge) return null;
+    const municipio = municipiosMap[codigoIbge];
+    if (!municipio) return "Carregando...";
+    return `${municipio.nome}, ${municipio.uf}`;
   };
 
   if (perfil?.tipo_usuario === 'organizador') {
@@ -195,7 +252,10 @@ const MinhasInscricoes = () => {
           {inscricoes.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-gray-600 dark:text-gray-400 text-lg">
-                Você ainda não se inscreveu em nenhum evento.
+                Você não tem inscrições em eventos futuros no momento.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                Eventos realizados ou expirados não aparecem aqui.
               </p>
             </div>
           ) : (
@@ -203,6 +263,7 @@ const MinhasInscricoes = () => {
               {inscricoes.map((inscricao) => {
                 const estaProcessando = processando.has(inscricao.id);
                 const evento = inscricao.eventos;
+                const localizacao = obterLocalizacao(evento.cidade);
 
                 return (
                   <li
@@ -210,7 +271,6 @@ const MinhasInscricoes = () => {
                     className="bg-white dark:bg-neutral-800 rounded-2xl shadow-lg border border-gray-200 dark:border-neutral-700 overflow-hidden"
                   >
                     <div className="flex flex-col md:flex-row">
-                      {/* Banner do evento */}
                       <div className="w-full md:w-64 h-48 md:h-auto relative overflow-hidden">
                         {evento.banner_url ? (
                           <img
@@ -225,7 +285,6 @@ const MinhasInscricoes = () => {
                         )}
                       </div>
 
-                      {/* Conteúdo */}
                       <div className="flex-1 p-6">
                         <div className="flex flex-col h-full justify-between">
                           <div>
@@ -238,10 +297,10 @@ const MinhasInscricoes = () => {
                                 <Calendar className="w-4 h-4" />
                                 {formatarData(evento.data_realizacao)}
                               </p>
-                              {evento.cidade && (
+                              {localizacao && (
                                 <p className="flex items-center gap-2">
                                   <MapPin className="w-4 h-4" />
-                                  {evento.cidade}
+                                  {localizacao}
                                 </p>
                               )}
                             </div>
@@ -262,7 +321,6 @@ const MinhasInscricoes = () => {
                             </div>
                           </div>
 
-                          {/* Botão de cancelar */}
                           {inscricao.status !== "expirada" && (
                             <div className="mt-6">
                               <button

@@ -8,6 +8,7 @@ import {
   ChevronDoubleRightIcon,
   ChevronDoubleLeftIcon,
   ClockIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import BarraSuperior from './BarraSuperior';
 import { useUsuario } from '../context/UsuarioContext';
@@ -20,10 +21,12 @@ interface Evento {
   data_realizacao: string;
   banner_url: string | null;
   realizado: boolean;
+  aprovado: boolean;
   id_criador: string;
   criador_nome?: string;
   criador_imagem_url?: string | null;
   cidade?: string;
+  cidade_nome?: string; 
 }
 
 export interface Municipio {
@@ -46,6 +49,7 @@ const Feed = () => {
   const [cidadeAlvo, setCidadeAlvo] = useState<number | null>(null);
   const [queryPesquisa, setQueryPesquisa] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<'nome' | 'cidade'>('nome');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const isCliente = perfil?.tipo_usuario === 'cliente';
   const isOrganizador = perfil?.tipo_usuario === 'organizador';
@@ -70,6 +74,11 @@ const Feed = () => {
     setSidebarOpen(false);
   };
 
+  const handleAprovarEventos = () => {
+    navigate('/aprovar');
+    setSidebarOpen(false);
+  };
+
   const buscarEventos = useCallback(async () => {
     if (!perfil || !supabase) return;
 
@@ -85,6 +94,7 @@ const Feed = () => {
         realizado,
         id_criador,
         cidade,
+        municipios!cidade (nome),
         usuarios!id_criador (
           nome,
           imagem_url
@@ -92,6 +102,7 @@ const Feed = () => {
       `)
       .eq('deletado', false)
       .eq('realizado', mostrarPassados)
+      .eq('aprovado', true)  
       .order('data_realizacao', { ascending: true });
 
     if (tipoFiltro === 'cidade') {
@@ -119,16 +130,28 @@ const Feed = () => {
         data_realizacao: e.data_realizacao,
         banner_url: e.banner_url,
         realizado: e.realizado,
+        aprovado: e.aprovado,
         id_criador: e.id_criador,
         criador_nome: e.usuarios?.nome,
         criador_imagem_url: e.usuarios?.imagem_url,
         cidade: e.cidade,
+        cidade_nome: e.municipios?.nome,
       }));
       setEventos(formatados);
     }
     setCarregando(false);
     setPaginaAtual(1);
   }, [perfil, supabase, mostrarPassados, tipoFiltro, cidadeAlvo, queryPesquisa]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   useEffect(() => {
     if (perfil?.cidade_id) {
@@ -268,6 +291,23 @@ const Feed = () => {
                   <span className={sidebarOpen ? 'block' : 'hidden md:block'}>Reviews</span>
                 </button>
               </>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={handleAprovarEventos}
+                className={`
+                  flex items-center gap-3 px-4 py-3 bg-green-600 text-white rounded-xl 
+                hover:bg-green-700 transition-colors font-medium shadow-sm
+                  md:flex ${!sidebarOpen ? 'hidden' : ''}
+                `.trim()}
+                aria-label="Aprovar eventos pendentes"
+              >
+                <ShieldCheckIcon className="w-5 h-5" />
+                <span className={sidebarOpen ? 'block' : 'hidden md:block'}>
+                  Aprovar Eventos
+                </span>
+              </button>
             )}
           </nav>
         </div>

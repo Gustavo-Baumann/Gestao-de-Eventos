@@ -12,6 +12,7 @@ interface Evento {
   data_realizacao: string;
   banner_url: string | null;
   realizado: boolean;
+  aprovado: boolean;
   id_criador: string;
   criador_nome?: string;
   criador_imagem_url?: string | null;
@@ -39,6 +40,7 @@ const MeusEventos = () => {
           data_realizacao,
           banner_url,
           realizado,
+          aprovado,
           id_criador,
           usuarios!id_criador (
             nome,
@@ -59,6 +61,7 @@ const MeusEventos = () => {
           data_realizacao: e.data_realizacao,
           banner_url: e.banner_url,
           realizado: e.realizado,
+          aprovado: e.aprovado,
           id_criador: e.id_criador,
           criador_nome: e.usuarios?.nome,
           criador_imagem_url: e.usuarios?.imagem_url,
@@ -226,12 +229,23 @@ return (
                 <p className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-1">
                   {evento.criador_nome}
                 </p>
-                <h3
-                  id={`evento-titulo-${evento.id}`}
-                  className="text-xl font-bold text-black dark:text-white mb-4"
-                >
-                  {evento.nome}
-                </h3>
+                <div>
+                  <h3
+                    id={`evento-titulo-${evento.id}`}
+                    className="text-xl font-bold text-black dark:text-white mb-2"
+                  >
+                    {evento.nome}
+                  </h3>
+
+                  {!evento.aprovado && (
+                    <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-sm font-medium rounded-full border border-yellow-300 dark:border-yellow-700">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      Aprovação pendente
+                    </div>
+                  )}
+                </div>
                 <Link
                   to={`/evento/${evento.id}`}
                   className="inline-block px-5 py-3 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition text-base font-medium border border-purple-300 dark:border-purple-700"

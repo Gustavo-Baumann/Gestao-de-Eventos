@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Pencil, X, Trash2, Upload, Loader2, Search, XCircle, CheckCircle, Ticket } from "lucide-react";
+import { Pencil, X, Trash2, Upload, Loader2, Search, XCircle, CheckCircle, Ticket, Star } from "lucide-react";
 import { useUsuario } from "../context/UsuarioContext";
 import Header from "./Header";
 import CampoEditavel from "./CampoEditavel";
@@ -14,16 +14,19 @@ export interface EventoData {
   numero_vagas: number | null;
   gratuito: boolean;
   realizado: boolean;
+  aprovado: boolean;
   data_realizacao: string;
   data_encerramento: string;
   banner_url: string | null;
   imagens_url: string[];
   id_criador: string;
+  nota_review: number | null;
 }
 
 interface Criador {
   id: string;
   nome: string;
+  numero_celular : string;
 }
 
 interface Municipio {
@@ -56,6 +59,8 @@ const Evento = () => {
   const [inscritosCount, setInscritosCount] = useState<number | null>(null);
   const [editandoVagas, setEditandoVagas] = useState(false);
   const [novoNumeroVagas, setNovoNumeroVagas] = useState(0);
+  const [temInscricaoConfirmada, setTemInscricaoConfirmada] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<null | boolean>(null);
 
   const isDono = userId === evento?.id_criador;
   const eventoIdNum = Number(id);
@@ -79,6 +84,24 @@ const Evento = () => {
     setCarregandoInscricao(false);
   };
 
+  const verificarInscricaoConfirmada = async () => {
+    if (!supabase || !userId || !eventoIdNum) return;
+
+    const { data, error } = await supabase
+      .from("inscricoes")
+      .select("id")
+      .eq("evento_id", eventoIdNum)
+      .eq("usuario_id", userId)
+      .eq("status", ["confirmada"])
+      .maybeSingle();
+
+    if (!error && data) {
+      setTemInscricaoConfirmada(true);
+    } else {
+      setTemInscricaoConfirmada(false);
+    }
+  };
+
   const buscarInscritosCount = async () => {
     if (!supabase || !evento?.id) return;
 
@@ -96,6 +119,23 @@ const Evento = () => {
   };
 
   useEffect(() => {
+    if (!supabase) return;
+
+    const checkAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
+    };
+
+    checkAdmin();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  useEffect(() => {
     const fetchTudo = async () => {
       if (!supabase || !id) return;
 
@@ -105,8 +145,9 @@ const Evento = () => {
         const { data: eventoData, error: eventoError } = await supabase
           .from("eventos")
           .select(`
-            id, nome, descricao, cidade, numero_vagas, gratuito, realizado,
-            data_realizacao, data_encerramento, banner_url, imagens_url, id_criador
+            id, nome, descricao, cidade, numero_vagas, gratuito, realizado, 
+            aprovado, data_realizacao, data_encerramento, banner_url, 
+            imagens_url, id_criador, nota_review
           `)
           .eq("id", id)
           .single();
@@ -116,7 +157,7 @@ const Evento = () => {
 
         const { data: criadorData, error: criadorError } = await supabase
           .from("usuarios")
-          .select("id, nome")
+          .select("id, nome, numero_celular")
           .eq("id", eventoData.id_criador)
           .single();
 
@@ -148,6 +189,7 @@ const Evento = () => {
         }
 
         await verificarInscricao();
+        await verificarInscricaoConfirmada();
         await buscarInscritosCount();
       } catch (err: any) {
         setError(err.message || "Erro ao carregar evento");
@@ -459,6 +501,38 @@ const Evento = () => {
     }
   };
 
+  const aprovarEvento = async (eventoId: number) => {
+    if (!confirm("Aprovar este evento? Ele ficará visível para todos.")) return;
+
+    const { error } = await supabase!
+      .from("eventos")
+      .update({ aprovado: true })
+      .eq("id", eventoId);
+
+    if (!error) {
+      setEvento(prev => prev ? { ...prev, aprovado: true } : null);
+      alert("Evento aprovado com sucesso!");
+    } else {
+      alert("Erro ao aprovar.");
+    }
+  };
+
+  const rejeitarEvento = async (eventoId: number) => {
+    if (!confirm("Rejeitar e EXCLUIR permanentemente este evento?")) return;
+
+    const { error } = await supabase!
+      .from("eventos")
+      .delete()
+      .eq("id", eventoId);
+
+    if (!error) {
+      alert("Evento rejeitado e excluído.");
+      navigate("/");
+    } else {
+      alert("Erro ao rejeitar.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-neutral-800 text-black dark:text-white pt-20 md:pt-20 p-4 flex items-center justify-center">
@@ -504,7 +578,7 @@ const Evento = () => {
     <Header titulo="Visualização do Evento" />
 
     <div className="max-w-3xl mx-auto space-y-0">
-      <div className="bg-gray-50 dark:bg-neutral-700 rounded-t-xl overflow-hidden">
+      <div className="bg-gray-200 dark:bg-neutral-700 rounded-t-xl overflow-hidden">
         {evento.banner_url ? (
           <div className="relative h-64">
             <img
@@ -570,6 +644,13 @@ const Evento = () => {
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Criador</p>
               <p className="text-sm text-gray-900 dark:text-gray-100">{criador.nome}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Telefone de Contato</p>
+              <p className="text-sm text-gray-900 dark:text-gray-100">{criador.numero_celular || "Não Informado"}</p>
             </div>
           </div>
 
@@ -714,175 +795,206 @@ const Evento = () => {
               )}
             </div>
           )}
-
-          <div className="space-y-3">
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Vagas</p>
-                <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mt-1">
-                  {evento?.numero_vagas && evento.numero_vagas > 0 ? (
-                    inscritosCount === null ? (
-                      <span className="inline-block w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          {!evento.realizado ? (
+            <>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Vagas</p>
+                  <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 mt-1">
+                    {evento?.numero_vagas && evento.numero_vagas > 0 ? (
+                      inscritosCount === null ? (
+                        <span className="inline-block w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      ) : (
+                        `${inscritosCount}/${evento.numero_vagas}`
+                      )
                     ) : (
-                      `${inscritosCount}/${evento.numero_vagas}`
-                    )
-                  ) : (
-                    "Vagas ilimitadas"
-                  )}
-                </p>
-              </div>
-
-              {isDono && !evento.realizado && !editandoVagas && (
-                <button
-                  onClick={() => setEditandoVagas(true)}
-                  className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition"
-                  aria-label="Editar número de vagas"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {editandoVagas && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min="0"
-                    defaultValue={evento.numero_vagas ?? 0}
-                    onChange={(e) => setNovoNumeroVagas(Number(e.target.value))}
-                    className="w-32 px-3 py-2 border rounded-lg bg-white dark:bg-neutral-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 dark:text-gray-100"
-                    autoFocus
-                  />
-
-                  <button
-                    onClick={() => setEditandoVagas(false)}
-                    className="p-2 bg-red-600 rounded-lg hover:bg-red-900 transition"
-                    aria-label="Cancelar"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      if (!supabase || !evento) return;
-
-                      const valor = Number(novoNumeroVagas);
-
-                      const { error } = await supabase
-                        .from("eventos")
-                        .update({ numero_vagas: valor })
-                        .eq("id", evento.id);
-
-                      if (error) {
-                        alert("Erro ao salvar: " + error.message);
-                        return;
-                      }
-
-                      setEvento((prev) =>
-                        prev ? { ...prev, numero_vagas: valor } : null
-                      );
-
-                      setEditandoVagas(false);
-                    }}
-                    className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                    aria-label="Salvar vagas"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Deixe em <strong>0</strong> para retirar o limite de vagas.
-                </p>
-              </div>
-            )}
-
-            {vagasTotais > 0 && (
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden relative mt-2">
-                <div
-                  className={`h-full transition-all duration-500 ease-out ${
-                    estaLotado ? "bg-red-500" : "bg-purple-600"
-                  }`}
-                  style={{ width: `${porcentagemPreenchida}%` }}
-                />
-                {estaLotado && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-bold text-white drop-shadow">LOTADO</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-          </div>
-
-
-          <div className="flex flex-col py-2">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</p>
-
-            <div className="flex items-center mt-1 gap-3">
-              {editandoTipo ? (
-                <>
-                  <select
-                    defaultValue={evento?.gratuito ? "gratuito" : "pago"}
-                    onChange={async (e) => {
-                      const isGratuito = e.target.value === "gratuito";
-                      setEditandoTipo(false); 
-
-                      if (!supabase || !evento) return;
-
-                      const { error } = await supabase
-                        .from("eventos")
-                        .update({ gratuito: isGratuito })
-                        .eq("id", evento.id);
-
-                      if (error) {
-                        alert("Erro ao alterar tipo: " + error.message);
-                        return;
-                      }
-
-                      setEvento(prev => prev ? { ...prev, gratuito: isGratuito } : null);
-                    }}
-                    className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    autoFocus
-                  >
-                    <option value="gratuito">Gratuito</option>
-                    <option value="pago">Pago</option>
-                  </select>
-
-                  <button
-                    onClick={() => setEditandoTipo(false)}
-                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    aria-label="Cancelar"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-medium">
-                    {evento?.gratuito ? (
-                      <span className="text-green-600 dark:text-green-400">Gratuito</span>
-                    ) : (
-                      <span className="text-orange-600 dark:text-orange-400">Pago</span>
+                      "Vagas ilimitadas"
                     )}
                   </p>
+                </div>
 
-                  {isDono && !evento?.realizado && (
+                {isDono && !evento.realizado && !editandoVagas && (
+                  <button
+                    onClick={() => setEditandoVagas(true)}
+                    className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition"
+                    aria-label="Editar número de vagas"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {editandoVagas && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={evento.numero_vagas ?? 0}
+                      onChange={(e) => setNovoNumeroVagas(Number(e.target.value))}
+                      className="w-32 px-3 py-2 border rounded-lg bg-white dark:bg-neutral-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 dark:text-gray-100"
+                      autoFocus
+                    />
+
                     <button
-                      onClick={() => setEditandoTipo(true)}
-                      className="p-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition"
-                      aria-label="Editar tipo"
+                      onClick={() => setEditandoVagas(false)}
+                      className="p-2 bg-red-600 rounded-lg hover:bg-red-900 transition"
+                      aria-label="Cancelar"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <X className="w-4 h-4" />
                     </button>
+
+                    <button
+                      onClick={async () => {
+                        if (!supabase || !evento) return;
+
+                        const valor = Number(novoNumeroVagas);
+
+                        const { error } = await supabase
+                          .from("eventos")
+                          .update({ numero_vagas: valor })
+                          .eq("id", evento.id);
+
+                        if (error) {
+                          alert("Erro ao salvar: " + error.message);
+                          return;
+                        }
+
+                        setEvento((prev) =>
+                          prev ? { ...prev, numero_vagas: valor } : null
+                        );
+
+                        setEditandoVagas(false);
+                      }}
+                      className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                      aria-label="Salvar vagas"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Deixe em <strong>0</strong> para retirar o limite de vagas.
+                  </p>
+                </div>
+              )}
+
+              {vagasTotais > 0 && (
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden relative mt-2">
+                  <div
+                    className={`h-full transition-all duration-500 ease-out ${
+                      estaLotado ? "bg-red-500" : "bg-purple-600"
+                    }`}
+                    style={{ width: `${porcentagemPreenchida}%` }}
+                  />
+                  {estaLotado && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs font-bold text-white drop-shadow">LOTADO</span>
+                    </div>
                   )}
-                </>
+                </div>
               )}
             </div>
-          </div>
+            <div className="flex flex-col py-2">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</p>
 
+              <div className="flex items-center mt-1 gap-3">
+                {editandoTipo ? (
+                  <>
+                    <select
+                      defaultValue={evento?.gratuito ? "gratuito" : "pago"}
+                      onChange={async (e) => {
+                        const isGratuito = e.target.value === "gratuito";
+                        setEditandoTipo(false); 
+
+                        if (!supabase || !evento) return;
+
+                        const { error } = await supabase
+                          .from("eventos")
+                          .update({ gratuito: isGratuito })
+                          .eq("id", evento.id);
+
+                        if (error) {
+                          alert("Erro ao alterar tipo: " + error.message);
+                          return;
+                        }
+
+                        setEvento(prev => prev ? { ...prev, gratuito: isGratuito } : null);
+                      }}
+                      className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      autoFocus
+                    >
+                      <option value="gratuito">Gratuito</option>
+                      <option value="pago">Pago</option>
+                    </select>
+
+                    <button
+                      onClick={() => setEditandoTipo(false)}
+                      className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      aria-label="Cancelar"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium">
+                      {evento?.gratuito ? (
+                        <span className="text-green-600 dark:text-green-400">Gratuito</span>
+                      ) : (
+                        <span className="text-orange-600 dark:text-orange-400">Pago</span>
+                      )}
+                    </p>
+
+                    {isDono && !evento?.realizado && (
+                      <button
+                        onClick={() => setEditandoTipo(true)}
+                        className="p-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition"
+                        aria-label="Editar tipo"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            </>
+          ) : (
+            <>
+            <div className="py-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Avaliação dos participantes
+              </p>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <Star className="w-10 h-10 text-yellow-500 fill-yellow-500" />
+                  <div>
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                      {evento.nota_review !== null ? evento.nota_review.toFixed(1) : "N/A"}
+                    </span>
+                    <span className="text-lg text-gray-500"> / 5.0</span>
+                  </div>
+                </div>
+
+                {temInscricaoConfirmada && perfil?.tipo_usuario === "cliente" && (
+                  <button
+                    onClick={() => navigate("/reviews")}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition font-medium shadow-md"
+                  >
+                    Review
+                  </button>
+                )}
+              </div>
+              {evento.nota_review === null && (
+                <p className="text-sm text-gray-500 mt-3">
+                  Seja o primeiro a avaliar este evento!
+                </p>
+              )}
+            </div>
+            </>
+          )}
           {renderBotaoInscricao()}
         </div>
       </div>
@@ -936,58 +1048,85 @@ const Evento = () => {
           )}
         </div>
 
-        {isDono && !evento.realizado && (
-          <>
+        <div className="space-y-6 mt-6">
+
+          {isDono && !evento.realizado && (
             <button
               onClick={handleModalDelete}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
               aria-label="Deletar evento"
             >
-              Deletar Evento
               <Trash2 className="w-4 h-4" />
+              Deletar Evento
             </button>
+          )}
 
-            {showDeleteModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-                <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Confirmar exclusão
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Tem certeza que deseja deletar o evento <strong>{evento.nome}</strong>? 
-                    Esta ação não pode ser desfeita.
-                  </p>
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      onClick={handleCancelarDelete}
-                      disabled={deleting}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleConfirmarDelete}
-                      disabled={deleting}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 transition font-medium"
-                    >
-                      {deleting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Deletando...
-                        </>
-                      ) : (
-                        <>
-                          Sim, deletar
-                          <Trash2 className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </div>
+          {isAdmin === true && evento.aprovado !== true && (
+            <div className="flex flex-wrap items-center gap-4 pt-6 border-t border-gray-200 dark:border-neutral-700">
+              <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                Ações de Administrador
+              </span>
+
+              <button
+                onClick={() => aprovarEvento(evento.id)}
+                disabled={processandoInscricao}
+                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-400 transition font-medium shadow-md"
+              >
+                <CheckCircle className="w-5 h-5" />
+                Aprovar Evento
+              </button>
+
+              <button
+                onClick={() => rejeitarEvento(evento.id)}
+                disabled={processandoInscricao}
+                className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 transition font-medium shadow-md"
+              >
+                <XCircle className="w-5 h-5" />
+                Rejeitar e Excluir
+              </button>
+            </div>
+          )}
+
+          {isDono && showDeleteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Confirmar exclusão
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Tem certeza que deseja deletar o evento <strong>{evento.nome}</strong>?
+                  Esta ação não pode ser desfeita.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={handleCancelarDelete}
+                    disabled={deleting}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleConfirmarDelete}
+                    disabled={deleting}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 transition font-medium"
+                  >
+                    {deleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Deletando...
+                      </>
+                    ) : (
+                      <>
+                        Sim, deletar
+                        <Trash2 className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-            )}
-          </>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   </Container>
