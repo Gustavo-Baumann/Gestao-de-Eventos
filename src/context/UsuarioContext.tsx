@@ -28,6 +28,7 @@ interface UsuarioContextType {
   uploadImagemPerfil: (file: File) => Promise<string | undefined>
   criarEvento: (dados: CriarEventoData) => Promise<void>;
   logout: () => Promise<void>
+  deletarConta: () => Promise<void>
 }
 
 interface CriarEventoData {
@@ -243,6 +244,17 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
     }
   };
 
+  const deletarConta = async () => {
+    const { error } = await supabase.rpc('deletar_minha_conta');
+
+    if (error) {
+      console.error('Erro ao deletar conta:', error);
+      alert('Ocorreu um erro ao deletar a conta. Tente novamente.');
+    } else {
+      await logout(); 
+    }
+  };
+
   useEffect(() => {
     buscarPerfilLogado();
 
@@ -274,6 +286,7 @@ const uploadImagemPerfil = async (file: File): Promise<string | undefined> => {
         logout,
         uploadImagemPerfil,
         criarEvento,
+        deletarConta,
       }}
     >
       {children}

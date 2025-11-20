@@ -43,10 +43,46 @@ export default function Cadastro() {
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false)
   const [erroSenhaConfirmacao, setErroSenhaConfirmacao] = useState<string | null>(null)
+  const [nomeDisponivel, setNomeDisponivel] = useState<null | boolean>(null);
+  const [checandoNome, setChecandoNome] = useState(false);
 
   const salvarDadosTemporarios = () => {
     localStorage.setItem('cadastro_pendente', JSON.stringify(form));
   };
+
+  const verificarNomeDuplicado = async (nome: string): Promise<boolean> => {
+    if (!nome.trim()) return false;
+
+    const nomeNormalizado = nome.trim().toLowerCase().replace(/\s+/g, '_');
+
+    const { data, error } = await supabase.rpc('verificar_nome_duplicado', {
+      nome_input: nomeNormalizado
+    });
+
+    if (error) {
+      console.error("Erro ao verificar duplicado:", error);
+      return false; 
+    }
+
+    return data === true;
+  };
+
+  useEffect(() => {
+    if (!form.nome.trim()) {
+      setNomeDisponivel(null);
+      return;
+    }
+
+    setChecandoNome(true);
+
+    const delay = setTimeout(async () => {
+      const existe = await verificarNomeDuplicado(form.nome);
+      setNomeDisponivel(!existe);  
+      setChecandoNome(false);
+    }, 400); 
+
+    return () => clearTimeout(delay);
+  }, [form.nome]);
 
   useEffect(() => {
     const delay = setTimeout(() => {
@@ -157,6 +193,11 @@ useEffect(() => {
 
     if (form.password.length < 6) {
       setErro('A senha deve ter pelo menos 6 caracteres.')
+      return;
+    }
+
+    if (nomeDisponivel === false) {
+      setErro('Já existe um usuário com esse nome. Escolha outro.');
       return;
     }
 
@@ -398,9 +439,27 @@ useEffect(() => {
               />
             </div>
 
+            {form.nome.trim() !== "" && (
+              <p className="mt-1 text-sm">
+                {checandoNome && (
+                  <span className="text-gray-600 italic">Verificando disponibilidade...</span>
+                )}
+
+                {!checandoNome && nomeDisponivel === true && (
+                  <span className="text-green-600 font-medium">Nome disponível ✓</span>
+                )}
+
+                {!checandoNome && nomeDisponivel === false && (
+                  <span className="text-red-600 font-medium">
+                    Nome já está em uso ✗
+                  </span>
+                )}
+              </p>
+            )}
+
             <div className="flex flex-col">
-              <label htmlFor="celular" className="text-sm font-medium text-gray-700 mb-1">
-                Número de celular
+              <label htmlFor="numero_celular" className="text-sm font-medium text-gray-700 mb-1">
+                Número de celular - Opcional
               </label>
               <input
                 id="celular"
@@ -409,7 +468,6 @@ useEffect(() => {
                 onChange={(e) => setForm({ ...form, numero_celular: e.target.value })}
                 placeholder="(00) 00000-0000"
                 aria-label="Número de celular"
-                autoComplete="tel"
                 className="max-w-md w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
               />
             </div>
@@ -471,6 +529,7 @@ useEffect(() => {
                 <input
                   id="busca_cidade"
                   type="text"
+                  required
                   value={buscaCidade}
                   onChange={(e) => setBuscaCidade(e.target.value)}
                   placeholder="Digite o nome da sua cidade"

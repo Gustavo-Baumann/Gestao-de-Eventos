@@ -61,6 +61,8 @@ const Evento = () => {
   const [novoNumeroVagas, setNovoNumeroVagas] = useState(0);
   const [temInscricaoConfirmada, setTemInscricaoConfirmada] = useState(false);
   const [isAdmin, setIsAdmin] = useState<null | boolean>(null);
+  const [exportando, setExportando] = useState(false);
+  const [erroExport, setErroExport] = useState<string | null>(null);
 
   const isDono = userId === evento?.id_criador;
   const eventoIdNum = Number(id);
@@ -301,20 +303,161 @@ const Evento = () => {
     setEvento((prev) => prev ? { ...prev, [campo]: novoValor } : null);
   };
 
+  const gerarExportCsv = async () => {
+    if (!supabase || !evento) return;
+
+    try {
+      setExportando(true);
+      setErroExport(null);
+
+      const { data: inscricoesData, error: inscricoesErro } = await supabase
+        .from("inscricoes")
+        .select("id, usuario_id, status, created_at")
+        .eq("evento_id", evento.id);
+
+      if (inscricoesErro) throw inscricoesErro;
+
+      const usuariosIds = inscricoesData.map((i) => i.usuario_id);
+
+      let usuariosData: any[] = [];
+      if (usuariosIds.length > 0) {
+        const { data: uData, error: uErro } = await supabase
+          .from("usuarios")
+          .select("id, nome, cidade_id")
+          .in("id", usuariosIds);
+
+        if (uErro) throw uErro;
+        usuariosData = uData;
+      }
+
+      const { data: reviewsData, error: reviewsErro } = await supabase
+        .from("reviews")
+        .select("id, id_usuario, nota, comentario, created_at")
+        .eq("id_evento", evento.id);
+
+      if (reviewsErro) throw reviewsErro;
+
+      const municipiosMap = new Map();
+      const estadosMap = new Map();
+
+      const resolverCidade = async (cidadeId: number | null) => {
+        if (!cidadeId) return { cidade: null, uf: null };
+
+        if (municipiosMap.has(cidadeId)) {
+          return municipiosMap.get(cidadeId);
+        }
+
+        const { data: mun, error: munErr } = await supabase
+          .from("municipios")
+          .select("codigo_ibge, nome, codigo_uf")
+          .eq("codigo_ibge", cidadeId)
+          .maybeSingle();
+
+        if (munErr || !mun) {
+          municipiosMap.set(cidadeId, { cidade: null, uf: null });
+          return { cidade: null, uf: null };
+        }
+
+        let ufSigla = null;
+
+        if (estadosMap.has(mun.codigo_uf)) {
+          ufSigla = estadosMap.get(mun.codigo_uf);
+        } else {
+          const { data: ufData } = await supabase
+            .from("estados")
+            .select("uf")
+            .eq("codigo_uf", mun.codigo_uf)
+            .maybeSingle();
+
+          ufSigla = ufData?.uf || null;
+          estadosMap.set(mun.codigo_uf, ufSigla);
+        }
+
+        const result = { cidade: mun.nome, uf: ufSigla };
+        municipiosMap.set(cidadeId, result);
+        return result;
+      };
+
+      const linhas: string[] = [];
+
+      linhas.push(`EVENTO:;${evento.nome}`);
+      linhas.push(`DESCRIÇÃO:;${(evento.descricao || "").replace(/;/g, ",")}`);
+      linhas.push(`CIDADE:;${evento.cidade || ""}`);
+      linhas.push(`NÚMERO DE VAGAS:;${evento.numero_vagas ?? ""}`);
+      linhas.push(`GRATUITO:;${evento.gratuito ? "Sim" : "Não"}`);
+      linhas.push(`REALIZADO:;${evento.realizado ? "Sim" : "Não"}`);
+      linhas.push(`DATA REALIZAÇÃO:;${evento.data_realizacao || ""}`);
+      linhas.push(`DATA ENCERRAMENTO:;${evento.data_encerramento || ""}`);
+      linhas.push(`NOTA REVIEW:;${evento.nota_review || ""}`);
+      linhas.push(""); 
+      linhas.push(""); 
+
+      linhas.push([
+        "inscricao_id",
+        "status",
+        "data_inscricao",
+        "usuario_nome",
+        "cidade",
+        "uf",
+        "nota_review",
+        "comentario_review",
+        "data_review"
+      ].join(";"));
+
+      for (const i of inscricoesData) {
+        const usuario = usuariosData.find((u) => u.id === i.usuario_id);
+        const { cidade, uf } = await resolverCidade(usuario?.cidade_id ?? null);
+
+        const review = reviewsData.find(
+          (r) => r.id_usuario === i.usuario_id
+        );
+
+        linhas.push([
+          i.id,
+          i.status,
+          i.created_at,
+          usuario?.nome ?? "",
+          cidade ?? "",
+          uf ?? "",
+          review?.nota ?? "",
+          (review?.comentario || "").replace(/;/g, ","),
+          review?.created_at ?? ""
+        ].join(";"));
+      }
+
+      const csvContent = linhas.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `evento_${evento.id}_export.csv`;
+      a.click();
+
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setErroExport(err.message || "Erro inesperado");
+      alert("Erro ao gerar export: " + err.message);
+    } finally {
+      setExportando(false);
+    }
+  };
+
+
   const renderBotaoInscricao = () => {
 
     if (perfil?.tipo_usuario === "organizador" && isDono) {
-    return (
-      <button
-        onClick={() => navigate(`/evento/${eventoIdNum}/inscricoes`)}
-        className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition font-medium flex items-center justify-center gap-2 shadow-md"
-      >
-        <Ticket className="w-5 h-5" />
-        Gerenciar Inscrições
-      </button>
-    );
-  }
-
+      return (
+        <button
+          onClick={() => navigate(`/evento/${eventoIdNum}/inscricoes`)}
+          className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition font-medium flex items-center justify-center gap-2 shadow-md"
+        >
+          <Ticket className="w-5 h-5" />
+          Gerenciar Inscrições
+        </button>
+      );
+    }
+    
     if (!perfil || perfil.tipo_usuario !== "cliente" || evento?.realizado) {
       return null;
     }
@@ -996,6 +1139,25 @@ const Evento = () => {
             </>
           )}
           {renderBotaoInscricao()}
+          {isDono && (
+            <button
+              onClick={gerarExportCsv}
+              disabled={exportando}
+              className="w-full py-3 mt-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition font-medium flex items-center justify-center gap-2 shadow-md"
+            >
+              {exportando ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Gerando CSV...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5" />
+                  Exportar dados do evento
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
