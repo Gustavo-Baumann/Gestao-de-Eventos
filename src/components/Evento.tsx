@@ -483,6 +483,7 @@ const Evento = () => {
     } catch (err: any) {
       setErroExport(err.message || "Erro inesperado");
       alert("Erro ao gerar export: " + err.message);
+      console.warn("CSV export warning:", erroExport);
     } finally {
       setExportando(false);
     }
