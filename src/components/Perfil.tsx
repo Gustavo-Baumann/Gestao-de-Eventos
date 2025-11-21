@@ -76,7 +76,7 @@ export default function Perfil() {
       <div className="w-full max-w-lg">
         <Header titulo={isProprioPerfil ? 'Meu Perfil' : `Perfil de @${perfil.nome}`} />
 
-        <div className="bg-white dark:bg-neutral-700 border border-blue-200 dark:border-blue-700 rounded-xl p-8 shadow-sm mt-6">
+        <div className="bg-white dark:bg-neutral-700 border border-blue-200 dark:border-blue-700 rounded-xl p-8 shadow-sm mt-16">
           <div className="flex justify-center mb-6">
             <div className="relative">
               {temImagem ? (

@@ -201,6 +201,11 @@ useEffect(() => {
       return;
     }
 
+    if(!form.cidade_id){
+      setErro('Selecione uma cidade após digitar');
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signUp({
         email: form.email,
@@ -487,6 +492,7 @@ useEffect(() => {
                   const erro = validarDataNascimento(novaData);
                   setErroDataNascimento(erro);
                 }}
+                required
                 aria-label="Data de nascimento"
                 aria-invalid={!!erroDataNascimento}
                 aria-describedby={erroDataNascimento ? 'erro-data-nascimento' : undefined}

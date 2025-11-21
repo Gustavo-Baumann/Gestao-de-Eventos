@@ -729,11 +729,11 @@ const Evento = () => {
     );
   }
 
-  if (error || !evento || !criador) {
+  if (error || !evento || !criador || !evento.aprovado) {
     return (
       <Container>
         <Header titulo="Visualização do Evento" />
-        <p className="text-red-600 text-center">{error || "Evento não encontrado"}</p>
+        <p className="text-red-600 text-center">{"Evento não encontrado"}</p>
       </Container>
     );
   }
