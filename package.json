@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && mkdir -p dist && cp -f _headers _redirects dist/ 2>/dev/null || (if not exist dist mkdir dist && copy _headers _redirects dist\\)",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
