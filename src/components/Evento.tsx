@@ -317,7 +317,11 @@ const Evento = () => {
 
       if (inscricoesErro) throw inscricoesErro;
 
-      const usuariosIds = inscricoesData.map((i) => i.usuario_id);
+      const inscricoesConfirmadas = inscricoesData.filter(
+        (i) => i.status === "confirmada"
+      );
+
+      const usuariosIds = inscricoesConfirmadas.map((i) => i.usuario_id);
 
       let usuariosData: any[] = [];
       if (usuariosIds.length > 0) {
@@ -330,39 +334,37 @@ const Evento = () => {
         usuariosData = uData;
       }
 
-      const { data: reviewsData, error: reviewsErro } = await supabase
+      let reviewsData: any[] = [];
+      const { data: rData, error: Erro } = await supabase
         .from("reviews")
         .select("id, id_usuario, nota, comentario, created_at")
         .eq("id_evento", evento.id);
 
-      if (reviewsErro) throw reviewsErro;
-
+      if (Erro) throw Erro;
+      reviewsData = rData;
+      
       const municipiosMap = new Map();
       const estadosMap = new Map();
 
       const resolverCidade = async (cidadeId: number | null) => {
         if (!cidadeId) return { cidade: null, uf: null };
 
-        if (municipiosMap.has(cidadeId)) {
-          return municipiosMap.get(cidadeId);
-        }
+        if (municipiosMap.has(cidadeId)) return municipiosMap.get(cidadeId);
 
-        const { data: mun, error: munErr } = await supabase
+        const { data: mun } = await supabase
           .from("municipios")
           .select("codigo_ibge, nome, codigo_uf")
           .eq("codigo_ibge", cidadeId)
           .maybeSingle();
 
-        if (munErr || !mun) {
+        if (!mun) {
           municipiosMap.set(cidadeId, { cidade: null, uf: null });
           return { cidade: null, uf: null };
         }
 
-        let ufSigla = null;
+        let ufSigla = estadosMap.get(mun.codigo_uf);
 
-        if (estadosMap.has(mun.codigo_uf)) {
-          ufSigla = estadosMap.get(mun.codigo_uf);
-        } else {
+        if (!ufSigla) {
           const { data: ufData } = await supabase
             .from("estados")
             .select("uf")
@@ -378,19 +380,65 @@ const Evento = () => {
         return result;
       };
 
+      const totalConfirmadas = inscricoesConfirmadas.length;
+      const numeroVagas = evento.numero_vagas || 0;
+      const ocupacao =
+        numeroVagas > 0 ? (totalConfirmadas / numeroVagas) * 100 : null;
+
+      const origemPorCidade: Record<string, number> = {};
+
+      for (const i of inscricoesConfirmadas) {
+        const usuario = usuariosData.find((u) => u.id === i.usuario_id);
+        if (!usuario) continue;
+
+        const { cidade, uf } = await resolverCidade(usuario.cidade_id);
+        const chave = `${cidade || "Desconhecida"} - ${uf || "--"}`;
+
+        origemPorCidade[chave] = (origemPorCidade[chave] || 0) + 1;
+      }
+
       const linhas: string[] = [];
 
       linhas.push(`EVENTO:;${evento.nome}`);
-      linhas.push(`DESCRIÇÃO:;${(evento.descricao || "").replace(/;/g, ",")}`);
+      linhas.push(`DESCRIÇÃO:;${(evento.descricao || "")
+        .replace(/[\r\n]+/g, " ")   
+        .replace(/;/g, ",")         
+      }`);
       linhas.push(`CIDADE:;${evento.cidade || ""}`);
-      linhas.push(`NÚMERO DE VAGAS:;${evento.numero_vagas ?? ""}`);
+      linhas.push(`NÚMERO DE VAGAS:;${numeroVagas}`);
       linhas.push(`GRATUITO:;${evento.gratuito ? "Sim" : "Não"}`);
       linhas.push(`REALIZADO:;${evento.realizado ? "Sim" : "Não"}`);
       linhas.push(`DATA REALIZAÇÃO:;${evento.data_realizacao || ""}`);
       linhas.push(`DATA ENCERRAMENTO:;${evento.data_encerramento || ""}`);
-      linhas.push(`NOTA REVIEW:;${evento.nota_review || ""}`);
-      linhas.push(""); 
-      linhas.push(""); 
+      linhas.push(`NOTA REVIEW (MÉDIA):;${evento.nota_review || ""}`);
+      linhas.push("");
+      linhas.push("");
+
+      const totalReviews = reviewsData.length;
+      const distribuicaoNotas: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      for (const r of reviewsData) {
+        const n = r.nota;
+        if (n >= 1 && n <= 5) distribuicaoNotas[n]++;
+      }
+      linhas.push("=== ESTATÍSTICAS ===");
+      linhas.push(`Inscrições confirmadas:;${totalConfirmadas}`);
+      if (ocupacao !== null)
+        linhas.push(`Ocupação das vagas:;${ocupacao.toFixed(2)}%`);
+      linhas.push("");
+
+      linhas.push("=== DISTRIBUIÇÃO DE NOTAS ===");
+      linhas.push(`Total de reviews:;${totalReviews}`);
+      for (let n = 1; n <= 5; n++) {
+        linhas.push(`${n} estrela(s):;${distribuicaoNotas[n]}`);
+      }
+      linhas.push("");
+
+      linhas.push("=== ORIGEM DOS PARTICIPANTES ===");
+      for (const cidade in origemPorCidade) {
+        linhas.push(`${cidade};${origemPorCidade[cidade]}`);
+      }
+      linhas.push("");
+      linhas.push("");
 
       linhas.push([
         "inscricao_id",
@@ -401,34 +449,31 @@ const Evento = () => {
         "uf",
         "nota_review",
         "comentario_review",
-        "data_review"
+        "data_review",
       ].join(";"));
 
-      for (const i of inscricoesData) {
+      for (const i of inscricoesConfirmadas) {
         const usuario = usuariosData.find((u) => u.id === i.usuario_id);
         const { cidade, uf } = await resolverCidade(usuario?.cidade_id ?? null);
-
-        const review = reviewsData.find(
-          (r) => r.id_usuario === i.usuario_id
-        );
+        const review = reviewsData.find((r) => r.id_usuario === i.usuario_id);
 
         linhas.push([
           i.id,
           i.status,
           i.created_at,
-          usuario?.nome ?? "",
-          cidade ?? "",
-          uf ?? "",
-          review?.nota ?? "",
+          usuario?.nome || "",
+          cidade || "",
+          uf || "",
+          review?.nota || "",
           (review?.comentario || "").replace(/;/g, ","),
-          review?.created_at ?? ""
+          review?.created_at || "",
         ].join(";"));
       }
 
       const csvContent = linhas.join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-
+      const blob = new Blob([csvContent,], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
       a.href = url;
       a.download = `evento_${evento.id}_export.csv`;
@@ -442,7 +487,6 @@ const Evento = () => {
       setExportando(false);
     }
   };
-
 
   const renderBotaoInscricao = () => {
 
