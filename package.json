@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && cp _headers _redirects dist/ || copy _headers _redirects dist\\",
+    "build": "tsc -b && vite build && node -e \"require('fs').copyFileSync('_headers', 'dist/_headers'); require('fs').copyFileSync('_redirects', 'dist/_redirects')\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },
