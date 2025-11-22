@@ -20,6 +20,7 @@ export default function Perfil() {
     atualizarCampo, 
     uploadImagemPerfil,
     deletarConta,
+    supabase,
   } = useUsuario();
 
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null);
@@ -30,9 +31,10 @@ export default function Perfil() {
   const [modalDeleteAberto, setModalDeleteAberto] = useState(false);
   const [textoConfirmacao, setTextoConfirmacao] = useState('');
   const [deletando, setDeletando] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const isProprioPerfil = usuarioLogado?.nome === nomeFromUrl;
-  const textoMagico = "excluir minha conta permanentemente";
+  const textoMagico = "excluir conta permanentemente";
 
   useEffect(() => {
     const carregar = async () => {
@@ -45,6 +47,16 @@ export default function Perfil() {
     };
     carregar();
   }, [nomeFromUrl, usuarioLogado, isProprioPerfil, buscarPerfilPorNome]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsAdmin(session?.user?.app_metadata?.role === 'admin');
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   const handleUpload = async (file: File) => {
     if (!perfil?.nome) return;
@@ -197,6 +209,42 @@ export default function Perfil() {
             )}
           </div>
         )}
+
+        {isAdmin && !isProprioPerfil &&(
+          <div className="mt-6 relative w-full">
+            <button
+              onClick={() => setMenuAberto(!menuAberto)}
+              className="w-full bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-gray-800 dark:text-gray-200 font-medium py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition shadow-sm"
+            >
+              <MoreVertical className="w-5 h-5" />
+              Opções da conta
+            </button>
+
+            {menuAberto && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMenuAberto(false)}
+                />
+
+                <div className="absolute bottom-full left-0 right-0 z-50 mb-2">
+                  <div className="bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-xl shadow-lg overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setMenuAberto(false);
+                        setModalDeleteAberto(true);
+                      }}
+                      className="w-full text-left px-6 py-4 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition flex items-center gap-3 font-medium"
+                    >
+                      <AlertCircle className="w-5 h-5" />
+                      Banir Usuário
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {modalDeleteAberto && (
@@ -204,7 +252,15 @@ export default function Perfil() {
           <div className="bg-white dark:bg-neutral-700 rounded-xl p-8 max-w-md w-full">
             <h2 className="text-2xl font-bold text-red-600 mb-4">Deletar conta</h2>
             <p className="text-gray-700 dark:text-gray-300 mb-6">
-              Essa ação é <strong>irreversível</strong>. Todos os seus dados serão apagados ou anonimizados.
+              {isAdmin && !isProprioPerfil ? (
+                <>
+                  Essa ação é <strong>irreversível</strong>. Todos os dados deste usuário serão apagados.
+                </>
+              ) : (
+                <>
+                  Essa ação é <strong>irreversível</strong>. Todos os seus dados serão apagados ou anonimizados.
+                </>
+              )}
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Para confirmar, digite exatamente:<br />

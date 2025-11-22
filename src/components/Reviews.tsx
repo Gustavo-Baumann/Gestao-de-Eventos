@@ -5,6 +5,7 @@ import { Loader2, Calendar, MapPin, Star, Trash2, Send } from "lucide-react";
 import Header from "./Header";
 import Container from "./Container";
 import { useUsuario } from "../context/UsuarioContext";
+import { useNavigate } from "react-router-dom";
 
 interface InscricaoComEvento {
   id: number;
@@ -26,6 +27,7 @@ interface ReviewExistente {
 
 const Reviews = () => {
   const { supabase, userId, perfil, logout } = useUsuario();
+  const navigate = useNavigate();
 
   const [itens, setItens] = useState<(InscricaoComEvento & { review?: ReviewExistente; carregandoReview?: boolean })[]>([]);
   const [municipiosMap, setMunicipiosMap] = useState<Record<string, { nome: string; uf: string }>>({});
@@ -214,6 +216,8 @@ const Reviews = () => {
       novo.delete(inscricaoId);
       return novo;
     });
+
+    navigate(0);
   };
 
   const deletarReview = async (inscricaoId: number, reviewId: number) => {
@@ -242,6 +246,8 @@ const Reviews = () => {
       novo.delete(inscricaoId);
       return novo;
     });
+
+    navigate(0);
   };
 
   const formatarData = (data: string) => {
