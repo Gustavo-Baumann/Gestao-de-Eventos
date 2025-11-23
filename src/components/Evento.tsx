@@ -578,7 +578,11 @@ const Evento = () => {
     }
   };
 
-  const handleModalDelete = () => setShowDeleteModal(true);
+  const handleModalDelete = () => {
+    if(isAdmin || isDono){
+      setShowDeleteModal(true);
+    } 
+  }
   const handleCancelarDelete = () => setShowDeleteModal(false);
 
   const handleConfirmarDelete = async () => {
