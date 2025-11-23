@@ -1268,6 +1268,17 @@ const Evento = () => {
             </button>
           )}
 
+          {isAdmin && !isDono && (
+            <button
+              onClick={handleModalDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
+              aria-label="Deletar evento"
+            >
+              <Trash2 className="w-4 h-4" />
+              Deletar Evento
+            </button>
+          )}
+
           {isAdmin === true && evento.aprovado !== true && (
             <div className="flex flex-wrap items-center gap-4 pt-6 border-t border-gray-200 dark:border-neutral-700">
               <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -1294,7 +1305,7 @@ const Evento = () => {
             </div>
           )}
 
-          {isDono && showDeleteModal && (
+          {showDeleteModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
               <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
